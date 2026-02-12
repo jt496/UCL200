@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Flat Torus Editor</title>
+  <style>
+    body{margin:0;font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    #canvasWrap{position:fixed;left:0;top:0;right:0;bottom:0;background:#222;display:flex;align-items:center;justify-content:center}
+    canvas{background:#fff;box-shadow:0 0 0 8px #222}
+    #ui{position:fixed;left:12px;top:12px;background:rgba(0,0,0,0.6);color:#fff;padding:8px;border-radius:6px;z-index:9999}
+    button{margin-right:6px}
+    textarea{width:300px;height:120px;margin-top:6px;font-size:12px}
+  </style>
+</head>
+<body>
+  <div id="ui">
+    <div><strong>Flat Torus Editor</strong></div>
+    <div id="msg">Mode: Vertex — Click inside the square to add a point. Click a point to remove it.</div>
+    <div style="margin-top:6px">
+      <button id="modeVertex" class="modeBtn active">Vertex Mode</button>
+      <button id="modeEdge" class="modeBtn">Edge Mode</button>
+    </div>
+    <div style="margin-top:6px">
+      <button id="clear">Clear</button>
+      <button id="export">Export JSON</button>
+      <button id="load">Load JSON</button>
+      <button id="to3d">Convert to 3D</button>
+    </div>
+    <textarea id="exportArea" placeholder="Exported JSON will appear here"></textarea>
+  </div>
+  <div id="canvasWrap">
+    <canvas id="flatCanvas" width="600" height="600"></canvas>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('flatCanvas');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const margin = 40; const boxSize = Math.min(W,H) - margin*2;
+    const boxX = (W - boxSize)/2, boxY = (H - boxSize)/2;
+
+    let points = [];// {id,s,t}
+    let nextId = 1;
+    let edges = []; // {a,b} ids
+    let selected = null; // selected vertex id or null
+    let midPoints = []; // array of {s,t} when user picks one or two boundary points
+
+    // Undo history
+    const history = [];
+    function cloneState(){ return { points: JSON.parse(JSON.stringify(points)), edges: JSON.parse(JSON.stringify(edges)), nextId }; }
+    function saveHistory(){ history.push(cloneState()); if(history.length>200) history.shift(); }
+    function undo(){ if(history.length===0) return; const st = history.pop(); points = st.points; edges = st.edges; nextId = st.nextId; selected = null; midPoints = []; draw(); }
+
+    // bind Ctrl+Z / Cmd+Z
+    window.addEventListener('keydown', (ev)=>{ if((ev.ctrlKey || ev.metaKey) && (ev.key === 'z' || ev.key === 'Z')){ ev.preventDefault(); undo(); } });
+    let mode = 'vertex'; // 'vertex' or 'edge'
+
+    // Helper: convert (possibly >1 or ==1) s,t to canvas x,y
+    function stToXY(s, t){
+      const eps = 1e-9;
+      let sw = s - Math.floor(s);
+      if(sw < eps && s > eps) sw = 1; // treat exact integer >0 as 1 (right/bottom edge)
+      let tw = t - Math.floor(t);
+      if(tw < eps && t > eps) tw = 1;
+      const x = boxX + sw * boxSize;
+      const y = boxY + tw * boxSize;
+      return {x,y};
+    }
+
+    function draw(){
+      ctx.clearRect(0,0,W,H);
+      // draw dashed boundary
+      ctx.save(); ctx.strokeStyle='#000'; ctx.setLineDash([6,6]); ctx.lineWidth=2;
+      ctx.strokeRect(boxX, boxY, boxSize, boxSize); ctx.restore();
+      // grid or wrap hints
+      // draw points
+      for(const p of points){
+        const x = boxX + p.s * boxSize; const y = boxY + p.t * boxSize;
+        // highlight if selected
+          const isSel = (selected === p.id);
+          ctx.beginPath(); ctx.fillStyle=isSel? '#ffbb33' : '#e33'; ctx.arc(x,y,12,0,Math.PI*2); ctx.fill();
+          if(isSel){ ctx.lineWidth=2; ctx.strokeStyle='#000'; ctx.stroke(); }
+      }
+      // draw edges (including wrapping)
+      ctx.strokeStyle='rgba(20,20,100,0.9)'; ctx.lineWidth=3;
+      for(const e of edges){
+        const a = points.find(q=>q.id===e.a); const b = points.find(q=>q.id===e.b); if(!a||!b) continue;
+        if(e.mids && Array.isArray(e.mids) && e.mids.length===2){
+          const m1 = e.mids[0], m2 = e.mids[1];
+          // v1 -> m1
+          drawWrappedSegment(a.s,a.t, m1.s, m1.t, {ghosts:false});
+          // wrapped(m1) -> m2
+          const m1w = wrapMid(m1);
+          drawWrappedSegment(m1w.s, m1w.t, m2.s, m2.t, {ghosts:false});
+          // wrapped(m2) -> v2
+          const m2w = wrapMid(m2);
+          drawWrappedSegment(m2w.s, m2w.t, b.s, b.t, {ghosts:false});
+        } else if(e.mid){
+          // single midpoint
+          drawWrappedSegment(a.s,a.t,e.mid.s,e.mid.t, {ghosts:false});
+          const midWrapped = wrapMid(e.mid);
+          drawWrappedSegment(midWrapped.s, midWrapped.t, b.s, b.t, {ghosts:false});
+        } else {
+          drawWrappedSegment(a.s,a.t,b.s,b.t);
+        }
+      }
+      // draw wrapped ghosts near edges
+      for(const p of points){
+        const s = p.s, t = p.t;
+        const variants = [ [-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1] ];
+        for(const [dx,dy] of variants){
+          const sx = s+dx, ty = t+dy;
+          if(sx>=0 && sx<=1 && ty>=0 && ty<=1) continue; // skip originals
+            const x = boxX + ((s+dx)%1+1)%1 * boxSize; const y = boxY + ((t+dy)%1+1)%1 * boxSize;
+            ctx.beginPath(); ctx.fillStyle='rgba(227,51,51,0.35)'; ctx.arc(x,y,9,0,Math.PI*2); ctx.fill();
+        }
+      }
+      // draw midPoint markers if set
+      for(let i=0;i<midPoints.length;i++){
+        const m = midPoints[i]; const mx = boxX + m.s * boxSize; const my = boxY + m.t * boxSize;
+          ctx.beginPath(); ctx.fillStyle = (i===0? '#33aaff':'#3399ff'); ctx.arc(mx,my,11,0,Math.PI*2); ctx.fill(); ctx.lineWidth=2; ctx.strokeStyle='#002233'; ctx.stroke();
+      }
+    }
+
+    function setMode(m){
+      mode = m;
+      document.getElementById('modeVertex').classList.toggle('active', m==='vertex');
+      document.getElementById('modeEdge').classList.toggle('active', m==='edge');
+      const msg = (m==='vertex') ? 'Mode: Vertex — Click inside the square to add a point. Click a point to remove it.' : 'Mode: Edge — Click points to select two and create an edge; click near an edge to delete it.';
+      document.getElementById('msg').textContent = msg;
+      // clear any transient selection when changing mode
+      selected = null; midPoints = []; draw();
+    }
+
+    function drawWrappedSegment(s0,t0,s1,t1, opts={ghosts:true}){
+      // choose shortest wrap in s and t independently
+      function wrapDelta(a,b){ let d = b - a; if(d > 0.5) d -= 1; if(d < -0.5) d += 1; return d; }
+      const ds = wrapDelta(s0,s1), dt = wrapDelta(t0,t1);
+      const steps = 64;
+      const pts = [];
+      for(let k=0;k<=steps;k++){ const tt=k/steps; const s = s0 + ds*tt; const t = t0 + dt*tt; const p = stToXY(s, t); pts.push([p.x,p.y]); }
+      // draw main polyline
+      ctx.beginPath(); for(let i=0;i<pts.length;i++){ const [x,y]=pts[i]; if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);} ctx.stroke();
+      if(opts.ghosts){
+        // draw ghosts so segments appear wrapping across edges
+        const shifts = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[1,1],[-1,1],[1,-1]];
+        for(const [sx,sy] of shifts){ ctx.beginPath(); for(let i=0;i<pts.length;i++){ const [x,y]=pts[i]; const nx = x + sx*boxSize; const ny = y + sy*boxSize; if(i===0) ctx.moveTo(nx,ny); else ctx.lineTo(nx,ny);} ctx.stroke(); }
+      }
+    }
+
+    function wrapMid(mid){
+      // mid is {s,t} located on boundary with either s==0||s==1 or t==0||t==1
+      let ms = mid.s, mt = mid.t;
+      if(Math.abs(ms - 0) < 1e-6) ms = 1; else if(Math.abs(ms - 1) < 1e-6) ms = 0;
+      if(Math.abs(mt - 0) < 1e-6) mt = 1; else if(Math.abs(mt - 1) < 1e-6) mt = 0;
+      return {s: ms, t: mt};
+    }
+
+    // Return an array of canvas-space points for the wrapped segment (used for hit-testing)
+    function wrappedSegmentPoints(s0,t0,s1,t1){
+      function wrapDelta(a,b){ let d = b - a; if(d > 0.5) d -= 1; if(d < -0.5) d += 1; return d; }
+      const ds = wrapDelta(s0,s1), dt = wrapDelta(t0,t1);
+      const steps = 64; const pts = [];
+      for(let k=0;k<=steps;k++){ const tt=k/steps; const s = s0 + ds*tt; const t = t0 + dt*tt; const p = stToXY(s,t); pts.push([p.x,p.y]); }
+      return pts;
+    }
+
+    function wrappedSegmentPointsForMid(e){
+      // returns concatenated points for edges with single mid or two mids (mids array)
+      const a = points.find(q=>q.id===e.a); const b = points.find(q=>q.id===e.b); if(!a||!b) return [];
+      if(e.mids && Array.isArray(e.mids) && e.mids.length===2){
+        const m1 = e.mids[0], m2 = e.mids[1];
+        const pts1 = wrappedSegmentPoints(a.s,a.t, m1.s, m1.t);
+        const m1w = wrapMid(m1);
+        const pts2 = wrappedSegmentPoints(m1w.s, m1w.t, m2.s, m2.t);
+        const m2w = wrapMid(m2);
+        const pts3 = wrappedSegmentPoints(m2w.s, m2w.t, b.s, b.t);
+        return pts1.concat(pts2).concat(pts3);
+      }
+      if(e.mid){
+        const pts1 = wrappedSegmentPoints(a.s,a.t,e.mid.s,e.mid.t);
+        const midW = wrapMid(e.mid);
+        const pts2 = wrappedSegmentPoints(midW.s, midW.t, b.s, b.t);
+        return pts1.concat(pts2);
+      }
+      return [];
+    }
+
+    function pointToSegmentDistance(px,py,x1,y1,x2,y2){
+      const A = px - x1, B = py - y1, C = x2 - x1, D = y2 - y1;
+      const dot = A * C + B * D;
+      const len_sq = C * C + D * D;
+      let param = 0;
+      if (len_sq !== 0) param = dot / len_sq;
+      let xx, yy;
+      if (param < 0) { xx = x1; yy = y1; param = 0; }
+      else if (param > 1) { xx = x2; yy = y2; param = 1; }
+      else { xx = x1 + param * C; yy = y1 + param * D; }
+      const dx = px - xx; const dy = py - yy; return {d: Math.sqrt(dx*dx + dy*dy), param};
+    }
+
+    function posToST(clientX, clientY){
+      const rect = canvas.getBoundingClientRect();
+      const cx = clientX - rect.left; const cy = clientY - rect.top;
+      // clamp to box
+      const s = Math.min(1, Math.max(0, (cx - boxX)/boxSize));
+      const t = Math.min(1, Math.max(0, (cy - boxY)/boxSize));
+      return {s,t};
+    }
+
+    function findNearby(s,t){
+      const px = boxX + s*boxSize, py = boxY + t*boxSize;
+      for(let i=0;i<points.length;i++){
+        const q = points[i]; const qx = boxX + q.s*boxSize, qy = boxY + q.t*boxSize;
+        const d = Math.hypot(px-qx, py-qy);
+        if(d < 10) return i;
+      }
+      return -1;
+    }
+
+    canvas.addEventListener('pointerdown', (ev)=>{
+      const {s,t} = posToST(ev.clientX, ev.clientY);
+      const px = boxX + s*boxSize, py = boxY + t*boxSize;
+      if(mode === 'edge'){
+        // edge mode: handle selection and midpoint logic; deletion happens on double-click
+        const idx = findNearby(s,t);
+        if(idx>=0){ // clicked a vertex
+          const pid = points[idx].id;
+          if(selected === null){ selected = pid; midPoints = []; }
+          else if(selected !== null && midPoints.length === 0){
+            // second click on vertex without mids: create simple edge
+            if(pid !== selected){ if(!edges.find(e=> (e.a===selected && e.b===pid) || (e.a===pid && e.b===selected))){ saveHistory(); edges.push({a:selected, b:pid}); } selected = null; midPoints = []; }
+          }
+          else if(selected !== null && midPoints.length === 1){
+            // one midpoint present: create single-mid edge
+            if(pid !== selected){ const mid = {s: Math.max(0, Math.min(1, midPoints[0].s)), t: Math.max(0, Math.min(1, midPoints[0].t))};
+              if(!edges.find(e=> (e.a===selected && e.b===pid && JSON.stringify(e.mid||null)===JSON.stringify(mid)) || (e.a===pid && e.b===selected && JSON.stringify(e.mid||null)===JSON.stringify(mid)))){ saveHistory(); edges.push({a:selected, b:pid, mid}); }
+            }
+            selected = null; midPoints = [];
+          }
+          else if(selected !== null && midPoints.length === 2){
+            // two midpoints: create two-mid edge
+            if(pid !== selected){ const m0 = {s: Math.max(0, Math.min(1, midPoints[0].s)), t: Math.max(0, Math.min(1, midPoints[0].t))}; const m1 = {s: Math.max(0, Math.min(1, midPoints[1].s)), t: Math.max(0, Math.min(1, midPoints[1].t))};
+              if(!edges.find(e=> (e.a===selected && e.b===pid && JSON.stringify(e.mids||null)===JSON.stringify([m0,m1])) || (e.a===pid && e.b===selected && JSON.stringify(e.mids||null)===JSON.stringify([m0,m1])))){
+                saveHistory(); edges.push({a:selected, b:pid, mids:[m0,m1]});
+              }
+            }
+            selected = null; midPoints = [];
+          }
+          draw(); return;
+        }
+
+        // click was not on a vertex: check if near boundary to set midPoint
+        const BOUNDARY_HIT_PX = 10;
+        // compute distance to each of 4 box edges
+        let onBoundary = false; let chosen = null;
+        // left
+        if(Math.abs(px - boxX) <= BOUNDARY_HIT_PX && py >= boxY && py <= boxY+boxSize){ onBoundary = true; chosen = {s:0, t: (py - boxY)/boxSize}; }
+        // right
+        if(!onBoundary && Math.abs(px - (boxX+boxSize)) <= BOUNDARY_HIT_PX && py >= boxY && py <= boxY+boxSize){ onBoundary = true; chosen = {s:1, t: (py - boxY)/boxSize}; }
+        // top
+        if(!onBoundary && Math.abs(py - boxY) <= BOUNDARY_HIT_PX && px >= boxX && px <= boxX+boxSize){ onBoundary = true; chosen = {s: (px - boxX)/boxSize, t:0}; }
+        // bottom
+        if(!onBoundary && Math.abs(py - (boxY+boxSize)) <= BOUNDARY_HIT_PX && px >= boxX && px <= boxX+boxSize){ onBoundary = true; chosen = {s: (px - boxX)/boxSize, t:1}; }
+        if(onBoundary){
+          // set midPoint(s) only if a vertex already selected
+          if(selected !== null){
+            if(midPoints.length < 2){ saveHistory(); midPoints.push({s: Math.max(0, Math.min(1, chosen.s)), t: Math.max(0, Math.min(1, chosen.t))}); draw(); }
+          }
+        }
+
+        return;
+      }
+
+      // vertex mode: click near point removes it, otherwise add
+      const idx = findNearby(s,t);
+      if(idx>=0){ saveHistory(); const id = points[idx].id; points.splice(idx,1); edges = edges.filter(e=> e.a!==id && e.b!==id); draw(); return; }
+      const id = nextId++; saveHistory(); points.push({id,s,t}); draw();
+    });
+
+    // double-click to delete a nearby point (only in vertex mode)
+    canvas.addEventListener('dblclick', (ev)=>{
+      if(mode !== 'vertex') return;
+      const {s,t} = posToST(ev.clientX, ev.clientY); const idx = findNearby(s,t);
+      if(idx>=0){ saveHistory(); const id = points[idx].id; points.splice(idx,1); edges = edges.filter(e=> e.a!==id && e.b!==id); draw(); }
+    });
+
+    document.getElementById('clear').addEventListener('click', ()=>{ saveHistory(); points.length=0; edges.length=0; selected = null; midPoints = []; nextId=1; draw(); });
+    document.getElementById('export').addEventListener('click', ()=>{ const txt = JSON.stringify({points,edges}, null, 2); document.getElementById('exportArea').value = txt; navigator.clipboard && navigator.clipboard.writeText(txt).catch(()=>{}); });
+    document.getElementById('load').addEventListener('click', ()=>{
+      const txt = document.getElementById('exportArea').value.trim();
+      if(!txt){ alert('Paste JSON into the textarea first.'); return; }
+      try{
+        saveHistory();
+        const obj = JSON.parse(txt);
+        let newPoints = [];
+        let newEdges = [];
+        if(Array.isArray(obj)){
+          // maybe an array of points (from index export)
+          newPoints = obj;
+        } else if(obj && typeof obj === 'object'){
+          if(Array.isArray(obj.points)) newPoints = obj.points;
+          if(Array.isArray(obj.edges)) newEdges = obj.edges;
+        }
+        // reset current state
+        points.length = 0; edges.length = 0;
+        // import points, preserving ids if present
+        for(const p of newPoints){
+          const id = (p.id !== undefined) ? p.id : nextId++;
+          const s = (p.s !== undefined) ? p.s : (p.u!==undefined ? p.u/(2*Math.PI) : 0);
+          const t = (p.t !== undefined) ? p.t : (p.v!==undefined ? (p.v/(2*Math.PI)+0.5) : 0);
+          points.push({id,s,t});
+          if(id >= nextId) nextId = id+1;
+        }
+        // import edges; convert coordinate endpoints into points
+        for(const e of newEdges){
+          let a = e.a, b = e.b;
+          if(a && typeof a === 'object'){
+            const id = nextId++; points.push({id, s: a.s, t: a.t}); a = id;
+          }
+          if(b && typeof b === 'object'){
+            const id = nextId++; points.push({id, s: b.s, t: b.t}); b = id;
+          }
+          const ne = {a,b};
+          if(e.mid) ne.mid = e.mid;
+          if(e.mids) ne.mids = e.mids;
+          edges.push(ne);
+        }
+        selected = null; midPoints = []; draw();
+      }catch(err){ alert('Failed to parse JSON: ' + err.message); }
+    });
+    document.getElementById('to3d').addEventListener('click', ()=>{
+      // save to localStorage and open index.html
+      localStorage.setItem('torus_points', JSON.stringify(points));
+      localStorage.setItem('torus_edges', JSON.stringify(edges));
+      window.location.href = 'index.html';
+    });
+
+    document.getElementById('modeVertex').addEventListener('click', ()=> setMode('vertex'));
+    document.getElementById('modeEdge').addEventListener('click', ()=> setMode('edge'));
+
+    // initial draw
+    draw(); saveHistory();
+  </script>
+</body>
+</html>
