@@ -295,7 +295,11 @@
     raycaster.setFromCamera(pointer, camera);
     // first check markers -> start dragging even when viewer is non-interactive
     const hitsMarkers = raycaster.intersectObjects(markersGroup.children, false);
-    if(hitsMarkers.length>0){ startDrag(hitsMarkers[0].object, evt); return; }
+    if(hitsMarkers.length>0){
+      // Only allow dragging when interactive mode is enabled. When not interactive, ignore marker clicks.
+      if(interactive){ startDrag(hitsMarkers[0].object, evt); }
+      return;
+    }
     if(!interactive) return; // other interactions (add/remove) disabled when interactive=false
     // else check torus for adding/removing when interactive
     const hits = raycaster.intersectObject(torus, false);

@@ -45,6 +45,7 @@
     let edges = []; // {a,b} ids
     let selected = null; // selected vertex id or null
     let midPoints = []; // array of {s,t} when user picks one or two boundary points
+    let draggingIndex = null;
 
     // Undo history
     const history = [];
@@ -273,11 +274,32 @@
         return;
       }
 
-      // vertex mode: click near point removes it, otherwise add
+      // vertex mode: click near point -> start dragging; otherwise add a new point
       const idx = findNearby(s,t);
-      if(idx>=0){ saveHistory(); const id = points[idx].id; points.splice(idx,1); edges = edges.filter(e=> e.a!==id && e.b!==id); draw(); return; }
+      if(idx>=0){
+        // start drag of existing point (saveHistory so we can undo the drag)
+        saveHistory();
+        draggingIndex = idx;
+        // capture pointer so move/up events stay directed to canvas
+        try{ canvas.setPointerCapture(ev.pointerId); }catch(e){}
+        return;
+      }
       const id = nextId++; saveHistory(); points.push({id,s,t}); draw();
     });
+
+    // pointermove: if dragging a point, update its s,t and redraw
+    canvas.addEventListener('pointermove', (ev)=>{
+      if(draggingIndex === null) return;
+      const {s,t} = posToST(ev.clientX, ev.clientY);
+      points[draggingIndex].s = Math.max(0, Math.min(1, s));
+      points[draggingIndex].t = Math.max(0, Math.min(1, t));
+      draw();
+    });
+
+    // pointerup/cancel: finish dragging
+    function finishDrag(ev){ if(draggingIndex === null) return; try{ canvas.releasePointerCapture(ev.pointerId); }catch(e){} draggingIndex = null; }
+    canvas.addEventListener('pointerup', finishDrag);
+    canvas.addEventListener('pointercancel', finishDrag);
 
     // double-click to delete a nearby point (only in vertex mode)
     canvas.addEventListener('dblclick', (ev)=>{
