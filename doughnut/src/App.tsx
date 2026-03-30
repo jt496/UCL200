@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Canvas2D } from './components/Canvas2D';
 import { Torus3D } from './components/Torus3D';
-import { Layout, Donut, Trash2, HelpCircle, Save, FolderOpen, Undo2, CircleDot, ArrowRight, Lock, Unlock, Eraser } from 'lucide-react';
+import { Layout, Donut, Trash2, HelpCircle, Save, FolderOpen, Undo2, CircleDot, ArrowRight, Lock, Unlock, Eraser, Users } from 'lucide-react';
 
 export type Vertex = {
   id: string;
@@ -92,6 +92,47 @@ function isGraphValid(vList: Vertex[], eList: Edge[]): boolean {
   return true;
 }
 
+function getMaxCliqueSize(vertices: Vertex[], edges: Edge[]): number {
+  if (vertices.length === 0) return 0;
+  
+  const adj = new Map<string, Set<string>>();
+  vertices.forEach(v => adj.set(v.id, new Set()));
+  
+  edges.forEach(e => {
+    adj.get(e.fromId)?.add(e.toId);
+    adj.get(e.toId)?.add(e.fromId);
+  });
+
+  let maxClique = 0;
+
+  function bronKerbosch(r: Set<string>, p: Set<string>, x: Set<string>) {
+    if (p.size === 0 && x.size === 0) {
+      maxClique = Math.max(maxClique, r.size);
+      return;
+    }
+    
+    // Pivot to prune search space
+    const pivot = Array.from(new Set([...p, ...x]))[0];
+    const neighborsOfPivot = adj.get(pivot) || new Set();
+    
+    const candidates = Array.from(p).filter(v => !neighborsOfPivot.has(v));
+    
+    for (const v of candidates) {
+      const neighborsOfV = adj.get(v) || new Set();
+      bronKerbosch(
+        new Set([...r, v]),
+        new Set(Array.from(p).filter(node => neighborsOfV.has(node))),
+        new Set(Array.from(x).filter(node => neighborsOfV.has(node)))
+      );
+      p.delete(v);
+      x.add(v);
+    }
+  }
+
+  bronKerbosch(new Set(), new Set(vertices.map(v => v.id)), new Set());
+  return maxClique;
+}
+
 function App() {
   const [vertices, setVertices] = useState<Vertex[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
@@ -107,6 +148,8 @@ function App() {
   const [duplicateEdgeInfo, setDuplicateEdgeInfo] = useState<{
     x1: number; y1: number; x2: number; y2: number;
   } | null>(null);
+
+  const maxCliqueSize = getMaxCliqueSize(vertices, edges);
 
   const saveToHistory = useCallback(() => {
     setHistory(prev => [...prev, { vertices, edges }].slice(-50)); // Keep last 50 steps
@@ -554,6 +597,12 @@ function App() {
           </div>
 
           <div className="flex gap-1 sm:gap-2 pointer-events-auto">
+            <div className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-3 bg-slate-900 rounded-xl border border-slate-700/50 shadow-lg text-indigo-400">
+              <Users size={18} className="sm:w-5 sm:h-5" />
+              <span className="font-black text-sm sm:text-base whitespace-nowrap">
+                Max Clique: <span className="text-white">{maxCliqueSize}</span>
+              </span>
+            </div>
             <button
               onClick={undo}
               className="p-2 sm:p-3 bg-slate-900 hover:bg-slate-800 rounded-xl border border-slate-700/50 shadow-lg transition-all active:scale-95"
