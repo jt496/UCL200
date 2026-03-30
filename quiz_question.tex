@@ -2,6 +2,8 @@
 \usepackage[utf8]{inputenc}
 \usepackage{amsmath, amssymb, amsthm}
 \newtheorem{question}{Question}
+\setlength\parskip{0.5em}
+\setlength\parindent{0cm}
 \usepackage{hyperref}
 
 \usepackage{tikz}
@@ -155,7 +157,7 @@ Can you find an example of a planar graph that requires four colours to colour i
 \caption{A 3-colouring of the dual graph}\label{3col}
 \end{figure}
 
-\begin{figure}[b]
+\begin{figure}[h]
 \begin{center}
 \begin{tikzpicture}[scale=0.8]
     % Torus schematic (isometric view)
@@ -181,22 +183,20 @@ Drawing a graph on a torus can be hard to visualize, but there is a nice trick w
 
 
 \section*{Why does 7 suffice?}
-Euler's characteristic relates the number of vertices ($V$), edges ($E$), and faces ($F$) of a graph drawn on a surface. For a torus the formula is: $V - E + F = 0$. 
+The key idea is the following: if every graph that can be drawn on a torus contains a vertex that belongs to at most 6 edges then we can colour the graph with 7 colours "by induction". [More formally: we can easily colour any graph with at most 7 vertices using 7 colours -- simply give each vertex a different colour. Now suppose we have a graph with $n>7$ vertices. If we can find a vertex $v$ that belongs to at most 6 edges, we can remove it from the graph, colour the remaining $n-1$ vertices with 7 colours (by our inductive hypothesis), and then colour $v$ with one of the colours that is not used by any of its neighbours (since $v$ has at most 6 neighbour there is always a colour available).]
 
-Now any face of graph contains at least 3 edges and each edge is shared by exactly 2 faces. 
-This tells us that $3F \le 2E$, or $F \le \frac{2}{3}E$. 
+So how do we show that any graph that can be drawn on the torus contains a vertex that belongs to at most 6 edges?
 
+There is a magical formula (called the Euler characteristic) that tells us how the number of vertices ($V$), edges ($E$), and faces ($F$) of a graph drawn on a surface are related. 
 
-
-
-On a torus, however, $E \le 3V$ implies that the average degree of a vertex is $2E/V \le 6$. 
-
-\begin{enumerate}
-    \item Explain why this ``Degree 6 Guarantee'' makes the Seven Colour Theorem for the torus much easier to prove by induction than the Four Colour Theorem for the plane.
-    \item Suppose you have a map on a torus with a region $R$ that has exactly 6 neighbours. If you remove $R$ and 7-colour the remaining map, how many colours are available for $R$ when you re-insert it?
-\end{enumerate}
-
-
+For a torus the formula says that: 
+\[
+V =  E - F.\]
+Now any face of a graph contains at least 3 edges, and each edge belongs to exactly 2 faces so this tells us that $2E \ge 3F$, so 
+\[
+6V = 6E - 6F \le 6E - 4E = 2E.
+\]
+This tells us that the average number of edges a verex belongs to is 6, which means that there must be at least one vertex that belongs to at most 6 edges!
 \end{document}
 
 \subsection*{Colouring Complete Graphs and Cycles}
