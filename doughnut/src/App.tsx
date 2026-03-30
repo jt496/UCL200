@@ -154,32 +154,34 @@ function App() {
   useEffect(() => {
     const newMaxClique = getMaxClique(vertices, edges);
     
-    // Check if previous clique is still valid and maximal
-    const prevExists = highlightedClique.size > 0 && Array.from(highlightedClique).every(id => vertices.some(v => v.id === id));
-    let stillCliqueAndMax = false;
-    
-    if (prevExists) {
-      const ids = Array.from(highlightedClique);
-      let isClique = true;
-      for (let i = 0; i < ids.length; i++) {
-        for (let j = i + 1; j < ids.length; j++) {
-          const hasEdge = edges.some(e => 
-            (e.fromId === ids[i] && e.toId === ids[j]) || 
-            (e.fromId === ids[j] && e.toId === ids[i])
-          );
-          if (!hasEdge) { isClique = false; break; }
+    setHighlightedClique(prev => {
+      // If the current clique is still valid and still at least as large as the best one found, keep it
+      if (prev.size > 0) {
+        const verticesExist = Array.from(prev).every(id => vertices.some(v => v.id === id));
+        if (verticesExist) {
+          const ids = Array.from(prev);
+          let isStillClique = true;
+          for (let i = 0; i < ids.length; i++) {
+            for (let j = i + 1; j < ids.length; j++) {
+              const hasEdge = edges.some(e => 
+                (e.fromId === ids[i] && e.toId === ids[j]) || 
+                (e.fromId === ids[j] && e.toId === ids[i])
+              );
+              if (!hasEdge) { isStillClique = false; break; }
+            }
+            if (!isStillClique) break;
+          }
+          
+          if (isStillClique && prev.size >= newMaxClique.size) {
+            return prev;
+          }
         }
-        if (!isClique) break;
       }
-      if (isClique && highlightedClique.size >= newMaxClique.size) {
-        stillCliqueAndMax = true;
-      }
-    }
-
-    if (!stillCliqueAndMax) {
-      setHighlightedClique(newMaxClique);
-    }
-  }, [vertices, edges, highlightedClique]);
+      
+      // Otherwise, update to the new maximum clique
+      return newMaxClique;
+    });
+  }, [vertices, edges]);
 
   const saveToHistory = useCallback(() => {
     setHistory(prev => [...prev, { vertices, edges }].slice(-50)); // Keep last 50 steps
