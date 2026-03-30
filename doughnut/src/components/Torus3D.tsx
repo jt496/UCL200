@@ -87,7 +87,7 @@ export const Torus3D: React.FC<Torus3DProps> = ({ vertices, edges, maxClique }) 
 
         {/* Glowing Vertices */}
         {vertices.map(v => {
-          const isHighlighted = maxClique.has(v.id);
+          const isHighlighted = maxClique.size >= 3 && maxClique.has(v.id);
           return (
             <mesh key={v.id} position={mapToTorus(v.x, v.y)}>
               <sphereGeometry args={[isHighlighted ? 0.18 : 0.12, 16, 16]} />
@@ -106,7 +106,7 @@ export const Torus3D: React.FC<Torus3DProps> = ({ vertices, edges, maxClique }) 
         {edges.map(edge => {
           const from = vertices.find(v => v.id === edge.fromId);
           if (!from) return null;
-          const isHighlighted = maxClique.size > 1 && maxClique.has(edge.fromId) && maxClique.has(edge.toId);
+          const isHighlighted = maxClique.size >= 3 && maxClique.has(edge.fromId) && maxClique.has(edge.toId);
           return <EdgeLine key={edge.id} edge={edge} from={from} highlight={isHighlighted} />;
         })}
       </Canvas>

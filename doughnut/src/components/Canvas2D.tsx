@@ -324,7 +324,7 @@ export const Canvas2D: React.FC<Canvas2DProps> = ({
       edges.forEach(edge => {
         const from = vertices.find(v => v.id === edge.fromId);
         if (from) {
-          const isHighlighted = maxClique.size > 1 && maxClique.has(edge.fromId) && maxClique.has(edge.toId);
+          const isHighlighted = maxClique.size >= 3 && maxClique.has(edge.fromId) && maxClique.has(edge.toId);
           ctx.strokeStyle = isHighlighted ? '#facc15' : '#818cf8';
           ctx.shadowColor = isHighlighted ? '#eab308' : '#4f46e5';
           ctx.lineWidth = isHighlighted ? 5 : 3;
@@ -361,7 +361,7 @@ export const Canvas2D: React.FC<Canvas2DProps> = ({
 
       // Vertices
       vertices.forEach(v => {
-        const isHighlighted = maxClique.has(v.id);
+        const isHighlighted = maxClique.size >= 3 && maxClique.has(v.id);
         ctx.shadowBlur = isHighlighted ? 20 : 15;
         ctx.shadowColor = isHighlighted ? '#facc15' : '#818cf8';
         ctx.fillStyle = isHighlighted ? '#facc15' : '#020617';
