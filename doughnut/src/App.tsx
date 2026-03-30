@@ -656,7 +656,7 @@ function App() {
       {/* Main Content Area */}
       {!showHelp && (
         <div className="w-full h-full flex items-center justify-center px-10 py-12 sm:p-24 bg-black">
-          <div className="relative">
+          <div className={`relative ${is3D ? 'w-full h-full' : ''}`}>
             <div className={`relative w-full ${is3D ? 'h-full' : 'aspect-square max-h-[80vh] max-w-[80vh] bg-black rounded-2xl shadow-[0_0_80px_rgba(79,70,229,0.15)] border border-slate-800/50 overflow-hidden'}`}>
               {is3D ? (
                 <Torus3D vertices={vertices} edges={edges} maxClique={maxClique} />
