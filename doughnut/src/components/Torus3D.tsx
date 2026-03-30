@@ -93,8 +93,8 @@ export const Torus3D: React.FC<Torus3DProps> = ({ vertices, edges, maxClique }) 
               <sphereGeometry args={[isHighlighted ? 0.18 : 0.12, 16, 16]} />
               <meshStandardMaterial 
                 color={isHighlighted ? "#facc15" : "#ffffff"} 
-                emissive={isHighlighted ? "#facc15" : "#ffffff"} 
-                emissiveIntensity={isHighlighted ? 5 : 2.5} 
+                emissive="#ffffff" 
+                emissiveIntensity={isHighlighted ? 3 : 2.5} 
                 toneMapped={false} 
               />
               <pointLight intensity={isHighlighted ? 2 : 1} distance={isHighlighted ? 3 : 2} color={isHighlighted ? "#facc15" : "#ffffff"} />

@@ -362,11 +362,11 @@ export const Canvas2D: React.FC<Canvas2DProps> = ({
       // Vertices
       vertices.forEach(v => {
         const isHighlighted = maxClique.has(v.id);
-        ctx.shadowBlur = isHighlighted ? 25 : 15;
+        ctx.shadowBlur = isHighlighted ? 20 : 15;
         ctx.shadowColor = isHighlighted ? '#facc15' : '#818cf8';
         ctx.fillStyle = isHighlighted ? '#facc15' : '#020617';
-        ctx.strokeStyle = isHighlighted ? '#ffffff' : '#818cf8';
-        ctx.lineWidth = isHighlighted ? 4 : 2.5;
+        ctx.strokeStyle = '#818cf8'; // Original indigo color
+        ctx.lineWidth = isHighlighted ? 3.5 : 2.5;
 
         for (let ox = -1; ox <= 1; ox++) {
           for (let oy = -1; oy <= 1; oy++) {
@@ -374,7 +374,7 @@ export const Canvas2D: React.FC<Canvas2DProps> = ({
             const vy = v.y + oy;
             if (vx > -0.2 && vx < 1.2 && vy > -0.2 && vy < 1.2) {
               ctx.beginPath();
-              ctx.arc(toScreenX(vx, sw), toScreenY(vy, sh), isHighlighted ? 11 : 9, 0, Math.PI * 2);
+              ctx.arc(toScreenX(vx, sw), toScreenY(vy, sh), isHighlighted ? 10 : 9, 0, Math.PI * 2);
               ctx.fill();
               ctx.stroke();
             }
