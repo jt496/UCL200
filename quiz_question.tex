@@ -4,7 +4,7 @@
 \usepackage{tikz}
 \usetikzlibrary{shapes, positioning, arrows.meta}
 
-\title{Advanced Graph Theory Quiz: Surfaces and Coloring}
+\title{Advanced Graph Theory Quiz: Surfaces and Colouring}
 \author{Mathematics Department}
 \date{\today}
 
@@ -14,6 +14,16 @@
 
 \section*{Background}
 In graph theory, Euler's Characteristic relates the number of vertices ($V$), edges ($E$), and faces ($F$) of a graph embedded on a surface. For a plane (or a sphere), the formula is: $V - E + F = 2$. For a torus (a doughnut shape), the formula is: $V - E + F = 0$.
+
+\section*{History and Context}
+The famous Four Colour Theorem has its roots right here at UCL. In 1852, \textbf{Francis Guthrie}, a mathematics student at University College London, noticed that four colours seemed sufficient to colour any map so that no two adjacent regions shared the same colour. He shared this observation with his brother Frederick, who then brought it to the attention of their professor, Augustus De Morgan.
+
+When we represent this problem using vertices and edges, we are looking at the \textbf{dual} of the map:
+\begin{itemize}
+    \item Each region of the map becomes a \textbf{vertex}.
+    \item Two vertices are connected by an \textbf{edge} if their corresponding regions share a border.
+\end{itemize}
+A colouring of the map is then equivalent to a ``vertex colouring'' of this dual graph, where no two connected vertices have the same colour.
 
 \section*{Question 1: Planarity and Complete Graphs}
 A complete graph $K_n$ is a graph where every vertex is connected to every other vertex by a unique edge.
@@ -48,7 +58,7 @@ Now imagine we are drawing our graph on a torus (a surface with one hole).
 \begin{enumerate}
     \item Using Euler's formula for a torus ($V - E + F = 0$), derive the equivalent inequality for the number of edges: $E \le 3V$.
     \item A complete graph $K_n$ has $E = \frac{n(n-1)}{2}$ edges. Calculate the maximum value of $n$ such that $K_n$ can be embedded on a torus without any edges crossing.
-    \item Why does this imply that while maps on a plane require 4 colors, maps on a torus can require up to 7?
+    \item Why does this imply that while maps on a plane require 4 colours, maps on a torus can require up to 7?
 \end{enumerate}
 
 \begin{center}
@@ -70,13 +80,13 @@ Now imagine we are drawing our graph on a torus (a surface with one hole).
 \end{center}
 
 \section*{Question 3: The ``Degree 6 Guarantee''}
-In the proof of the Four Color Theorem for planar graphs, we are only guaranteed that every map has a region with at most 5 neighbors. This makes the proof notoriously difficult.
+In the proof of the Four Colour Theorem for planar graphs, we are only guaranteed that every map has a region with at most 5 neighbours. This makes the proof notoriously difficult.
 
 On a torus, however, $E \le 3V$ implies that the average degree of a vertex is $2E/V \le 6$. 
 
 \begin{enumerate}
-    \item Explain why this ``Degree 6 Guarantee'' makes the Seven Color Theorem for the torus much easier to prove by induction than the Four Color Theorem for the plane.
-    \item Suppose you have a map on a torus with a region $R$ that has exactly 6 neighbors. If you remove $R$ and 7-color the remaining map, how many colors are available for $R$ when you re-insert it?
+    \item Explain why this ``Degree 6 Guarantee'' makes the Seven Colour Theorem for the torus much easier to prove by induction than the Four Colour Theorem for the plane.
+    \item Suppose you have a map on a torus with a region $R$ that has exactly 6 neighbours. If you remove $R$ and 7-colour the remaining map, how many colours are available for $R$ when you re-insert it?
 \end{enumerate}
 
 \end{document}
