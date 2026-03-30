@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Canvas2D } from './components/Canvas2D';
 import { Torus3D } from './components/Torus3D';
 import { Layout, Donut, Trash2, HelpCircle, Save, FolderOpen, Undo2, CircleDot, ArrowRight, Lock, Unlock, Eraser } from 'lucide-react';
@@ -149,38 +149,34 @@ function App() {
     x1: number; y1: number; x2: number; y2: number;
   } | null>(null);
 
-  const [highlightedClique, setHighlightedClique] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
+  const lastClique = useRef<Set<string>>(new Set());
+  const highlightedClique = useMemo(() => {
     const newMaxClique = getMaxClique(vertices, edges);
-    
-    setHighlightedClique(prev => {
-      // If the current clique is still valid and still at least as large as the best one found, keep it
-      if (prev.size > 0) {
-        const verticesExist = Array.from(prev).every(id => vertices.some(v => v.id === id));
-        if (verticesExist) {
-          const ids = Array.from(prev);
-          let isStillClique = true;
-          for (let i = 0; i < ids.length; i++) {
-            for (let j = i + 1; j < ids.length; j++) {
-              const hasEdge = edges.some(e => 
-                (e.fromId === ids[i] && e.toId === ids[j]) || 
-                (e.fromId === ids[j] && e.toId === ids[i])
-              );
-              if (!hasEdge) { isStillClique = false; break; }
-            }
-            if (!isStillClique) break;
+    const prev = lastClique.current;
+
+    if (prev.size > 0) {
+      const verticesExist = Array.from(prev).every(id => vertices.some(v => v.id === id));
+      if (verticesExist) {
+        const ids = Array.from(prev);
+        let isStillClique = true;
+        for (let i = 0; i < ids.length; i++) {
+          for (let j = i + 1; j < ids.length; j++) {
+            const hasEdge = edges.some(e => 
+              (e.fromId === ids[i] && e.toId === ids[j]) || 
+              (e.fromId === ids[j] && e.toId === ids[i])
+            );
+            if (!hasEdge) { isStillClique = false; break; }
           }
-          
-          if (isStillClique && prev.size >= newMaxClique.size) {
-            return prev;
-          }
+          if (!isStillClique) break;
+        }
+        if (isStillClique && prev.size >= newMaxClique.size) {
+          return prev;
         }
       }
-      
-      // Otherwise, update to the new maximum clique
-      return newMaxClique;
-    });
+    }
+
+    lastClique.current = newMaxClique;
+    return newMaxClique;
   }, [vertices, edges]);
 
   const saveToHistory = useCallback(() => {
@@ -687,26 +683,28 @@ function App() {
 
       {/* Main Content Area */}
       {!showHelp && (
-        <div className={`w-full h-full bg-black ${is3D ? '' : 'flex items-center justify-center p-6 sm:p-24'}`}>
+        <div className="w-full h-full bg-black">
           {is3D ? (
             <Torus3D vertices={vertices} edges={edges} maxClique={highlightedClique} />
           ) : (
-            <div className="relative w-full aspect-square max-h-[80vh] max-w-[80vh] bg-black rounded-2xl shadow-[0_0_80px_rgba(79,70,229,0.15)] border border-slate-800/50 overflow-hidden">
-              <Canvas2D
-                vertices={vertices}
-                edges={edges}
-                maxClique={highlightedClique}
-                currentTool={currentTool}
-                onAddVertex={addVertex}
-                onAddEdge={addEdge}
-                onRemoveVertex={removeVertex}
-                onRemoveEdge={removeEdge}
-                onMoveVertex={moveVertex}
-                onStartMove={saveToHistory}
-                onEndMove={endMove}
-                crossingInfo={crossingInfo}
-                duplicateEdgeInfo={duplicateEdgeInfo}
-              />
+            <div className="w-full h-full flex items-center justify-center p-6 sm:p-24">
+              <div className="relative w-full aspect-square max-h-[80vh] max-w-[80vh] bg-black rounded-2xl shadow-[0_0_80px_rgba(79,70,229,0.15)] border border-slate-800/50 overflow-hidden">
+                <Canvas2D
+                  vertices={vertices}
+                  edges={edges}
+                  maxClique={highlightedClique}
+                  currentTool={currentTool}
+                  onAddVertex={addVertex}
+                  onAddEdge={addEdge}
+                  onRemoveVertex={removeVertex}
+                  onRemoveEdge={removeEdge}
+                  onMoveVertex={moveVertex}
+                  onStartMove={saveToHistory}
+                  onEndMove={endMove}
+                  crossingInfo={crossingInfo}
+                  duplicateEdgeInfo={duplicateEdgeInfo}
+                />
+              </div>
             </div>
           )}
         </div>
