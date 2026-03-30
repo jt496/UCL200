@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Canvas2D } from './components/Canvas2D';
 import { Torus3D } from './components/Torus3D';
 import { Layout, Donut, Trash2, HelpCircle, Save, FolderOpen, Undo2, CircleDot, ArrowRight, Lock, Unlock, Eraser } from 'lucide-react';
@@ -149,7 +149,7 @@ function App() {
     x1: number; y1: number; x2: number; y2: number;
   } | null>(null);
 
-  const maxCliqueSize = getMaxCliqueSize(vertices, edges);
+  const maxCliqueSize = useMemo(() => getMaxCliqueSize(vertices, edges), [vertices, edges]);
 
   const saveToHistory = useCallback(() => {
     setHistory(prev => [...prev, { vertices, edges }].slice(-50)); // Keep last 50 steps
@@ -597,14 +597,6 @@ function App() {
           </div>
 
           <div className="flex gap-1 sm:gap-2 pointer-events-auto">
-            <div 
-              className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-3 bg-indigo-700/80 rounded-xl border-2 border-white shadow-[0_0_20px_rgba(255,255,255,0.3)] pointer-events-auto"
-              style={{ zIndex: 999 }}
-            >
-              <span className="font-black text-xs sm:text-sm uppercase tracking-tighter text-white whitespace-nowrap">
-                Max Clique: <span className="text-white text-base">{maxCliqueSize}</span>
-              </span>
-            </div>
             <button
               onClick={undo}
               className="p-2 sm:p-3 bg-slate-900 hover:bg-slate-800 rounded-xl border border-slate-700/50 shadow-lg transition-all active:scale-95"
@@ -663,26 +655,36 @@ function App() {
 
       {/* Main Content Area */}
       {!showHelp && (
-        <div className="w-full h-full flex items-center justify-center px-10 py-4 sm:p-12 overflow-hidden bg-black">
-          <div className={`relative w-full ${is3D ? 'h-full' : 'aspect-square max-h-[80vh] max-w-[80vh] bg-black rounded-2xl shadow-[0_0_80px_rgba(79,70,229,0.15)] border border-slate-800/50 overflow-hidden'}`}>
-            {is3D ? (
-              <Torus3D vertices={vertices} edges={edges} />
-            ) : (
-              <Canvas2D
-                vertices={vertices}
-                edges={edges}
-                currentTool={currentTool}
-                onAddVertex={addVertex}
-                onAddEdge={addEdge}
-                onRemoveVertex={removeVertex}
-                onRemoveEdge={removeEdge}
-                onMoveVertex={moveVertex}
-                onStartMove={saveToHistory}
-                onEndMove={endMove}
-                crossingInfo={crossingInfo}
-                duplicateEdgeInfo={duplicateEdgeInfo}
-              />
+        <div className="w-full h-full flex items-center justify-center px-10 py-12 sm:p-24 overflow-hidden bg-black">
+          <div className="relative">
+            {!is3D && (
+              <div className="absolute -top-12 right-0 py-1 flex items-center gap-2 pointer-events-none select-none z-50">
+                <span className="text-indigo-400 font-black text-sm sm:text-base uppercase tracking-widest">Max Clique</span>
+                <span className="bg-indigo-600 text-white px-3 py-1 rounded-lg font-black text-lg sm:text-xl shadow-[0_0_15px_rgba(79,70,229,0.5)]">
+                  {maxCliqueSize}
+                </span>
+              </div>
             )}
+            <div className={`relative w-full ${is3D ? 'h-full' : 'aspect-square max-h-[80vh] max-w-[80vh] bg-black rounded-2xl shadow-[0_0_80px_rgba(79,70,229,0.15)] border border-slate-800/50 overflow-hidden'}`}>
+              {is3D ? (
+                <Torus3D vertices={vertices} edges={edges} />
+              ) : (
+                <Canvas2D
+                  vertices={vertices}
+                  edges={edges}
+                  currentTool={currentTool}
+                  onAddVertex={addVertex}
+                  onAddEdge={addEdge}
+                  onRemoveVertex={removeVertex}
+                  onRemoveEdge={removeEdge}
+                  onMoveVertex={moveVertex}
+                  onStartMove={saveToHistory}
+                  onEndMove={endMove}
+                  crossingInfo={crossingInfo}
+                  duplicateEdgeInfo={duplicateEdgeInfo}
+                />
+              )}
+            </div>
           </div>
         </div>
       )}
