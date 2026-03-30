@@ -655,31 +655,31 @@ function App() {
 
       {/* Main Content Area */}
       {!showHelp && (
-        <div className="w-full h-full flex items-center justify-center px-10 py-12 sm:p-24 overflow-hidden bg-black">
+        <div className="w-full h-full flex items-center justify-center px-10 py-12 sm:p-24 bg-black">
           <div className="relative">
             {!is3D && (
               <div 
                 style={{
-                  position: 'fixed',
-                  bottom: '80px', // Above the mode toggles
-                  left: '50%',
-                  transform: 'translateX(-50%)',
+                  position: 'absolute',
+                  bottom: 'calc(100% + 10px)', // Just above the rectangle
+                  right: '0',
                   background: '#6366f1', // Indigo 600
                   color: 'white',
-                  padding: '12px 24px',
-                  borderRadius: '16px',
-                  boxShadow: '0 0 20px rgba(99, 102, 241, 0.5)',
+                  padding: '6px 16px',
+                  borderRadius: '12px',
+                  boxShadow: '0 0 20px rgba(99, 102, 241, 0.4)',
                   zIndex: 9999,
                   fontWeight: '900',
                   pointerEvents: 'none',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '12px',
-                  border: '2px solid rgba(255, 255, 255, 0.2)'
+                  gap: '8px',
+                  border: '2px solid rgba(255, 255, 255, 0.2)',
+                  whiteSpace: 'nowrap'
                 }}
               >
-                <span style={{ fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.8 }}>Max Clique</span>
-                <span style={{ fontSize: '24px' }}>{maxCliqueSize}</span>
+                <span style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.8 }}>Max Clique</span>
+                <span style={{ fontSize: '20px' }}>{maxCliqueSize}</span>
               </div>
             )}
             <div className={`relative w-full ${is3D ? 'h-full' : 'aspect-square max-h-[80vh] max-w-[80vh] bg-black rounded-2xl shadow-[0_0_80px_rgba(79,70,229,0.15)] border border-slate-800/50 overflow-hidden'}`}>
