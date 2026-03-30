@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Canvas2D } from './components/Canvas2D';
 import { Torus3D } from './components/Torus3D';
-import { Layout, Donut, Trash2, HelpCircle, Save, FolderOpen, Undo2, CircleDot, ArrowRight, Lock, Unlock, Eraser, Users } from 'lucide-react';
+import { Layout, Donut, Trash2, HelpCircle, Save, FolderOpen, Undo2, CircleDot, ArrowRight, Lock, Unlock, Eraser } from 'lucide-react';
 
 export type Vertex = {
   id: string;
@@ -597,10 +597,12 @@ function App() {
           </div>
 
           <div className="flex gap-1 sm:gap-2 pointer-events-auto">
-            <div className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-3 bg-slate-900 rounded-xl border border-slate-700/50 shadow-lg text-indigo-400">
-              <Users size={18} className="sm:w-5 sm:h-5" />
-              <span className="font-black text-sm sm:text-base whitespace-nowrap">
-                Max Clique: <span className="text-white">{maxCliqueSize}</span>
+            <div 
+              className="flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-3 bg-indigo-700/80 rounded-xl border-2 border-white shadow-[0_0_20px_rgba(255,255,255,0.3)] pointer-events-auto"
+              style={{ zIndex: 999 }}
+            >
+              <span className="font-black text-xs sm:text-sm uppercase tracking-tighter text-white whitespace-nowrap">
+                Max Clique: <span className="text-white text-base">{maxCliqueSize}</span>
               </span>
             </div>
             <button
