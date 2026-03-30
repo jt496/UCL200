@@ -1,0 +1,82 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{tikz}
+\usetikzlibrary{shapes, positioning, arrows.meta}
+
+\title{Advanced Graph Theory Quiz: Surfaces and Coloring}
+\author{Mathematics Department}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section*{Background}
+In graph theory, Euler's Characteristic relates the number of vertices ($V$), edges ($E$), and faces ($F$) of a graph embedded on a surface. For a plane (or a sphere), the formula is: $V - E + F = 2$. For a torus (a doughnut shape), the formula is: $V - E + F = 0$.
+
+\section*{Question 1: Planarity and Complete Graphs}
+A complete graph $K_n$ is a graph where every vertex is connected to every other vertex by a unique edge.
+
+\begin{enumerate}
+    \item Show that for any simple planar graph, $E \le 3V - 6$. (Hint: Every face must have at least 3 edges).
+    \item Use this inequality to prove that $K_5$ is not planar, but $K_4$ is.
+    \item Below is an illustration of $K_4$ drawn without any edges crossing.
+\end{enumerate}
+
+\begin{center}
+\begin{tikzpicture}[scale=1.5, every node/.style={circle, fill=blue!20, draw, minimum size=0.8cm, font=\bfseries}]
+    % Define vertices of K4
+    \node (A) at (0, 0) {1};
+    \node (B) at (2, 0) {2};
+    \node (C) at (1, 1.732) {3};
+    \node (D) at (1, 0.6) {4};
+
+    % Draw edges for planar K4
+    \draw[thick] (A) -- (B);
+    \draw[thick] (B) -- (C);
+    \draw[thick] (C) -- (A);
+    \draw[thick] (A) -- (D);
+    \draw[thick] (B) -- (D);
+    \draw[thick] (C) -- (D);
+\end{tikzpicture}
+\end{center}
+
+\section*{Question 2: Graphs on a Torus}
+Now imagine we are drawing our graph on a torus (a surface with one hole).
+
+\begin{enumerate}
+    \item Using Euler's formula for a torus ($V - E + F = 0$), derive the equivalent inequality for the number of edges: $E \le 3V$.
+    \item A complete graph $K_n$ has $E = \frac{n(n-1)}{2}$ edges. Calculate the maximum value of $n$ such that $K_n$ can be embedded on a torus without any edges crossing.
+    \item Why does this imply that while maps on a plane require 4 colors, maps on a torus can require up to 7?
+\end{enumerate}
+
+\begin{center}
+\begin{tikzpicture}[scale=0.8]
+    % Torus schematic (isometric view)
+    \draw[thick] (0,0) ellipse (4cm and 2cm);
+    \begin{scope}
+        \clip (-2,-0.3) rectangle (2,1);
+        \draw[thick] (0,1.2) ellipse (2.5cm and 1.5cm);
+    \end{scope}
+    \begin{scope}
+        \clip (-2,0.3) rectangle (2,-1);
+        \draw[thick] (0,-1.2) ellipse (2.5cm and 1.5cm);
+    \end{scope}
+
+    % Schematic of an embedding (conceptual)
+    \node at (0,-3) {\textit{Figure: Conceptual representation of a torus.}};
+\end{tikzpicture}
+\end{center}
+
+\section*{Question 3: The ``Degree 6 Guarantee''}
+In the proof of the Four Color Theorem for planar graphs, we are only guaranteed that every map has a region with at most 5 neighbors. This makes the proof notoriously difficult.
+
+On a torus, however, $E \le 3V$ implies that the average degree of a vertex is $2E/V \le 6$. 
+
+\begin{enumerate}
+    \item Explain why this ``Degree 6 Guarantee'' makes the Seven Color Theorem for the torus much easier to prove by induction than the Four Color Theorem for the plane.
+    \item Suppose you have a map on a torus with a region $R$ that has exactly 6 neighbors. If you remove $R$ and 7-color the remaining map, how many colors are available for $R$ when you re-insert it?
+\end{enumerate}
+
+\end{document}

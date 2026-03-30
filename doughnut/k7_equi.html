@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>K7 Embedding on a Torus</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+        }
+        canvas {
+            background-color: white;
+            border: 2px solid #333;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .controls {
+            margin-top: 20px;
+            max-width: 600px;
+            text-align: center;
+        }
+        .legend {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>K7 Embedding (7-Color Map) on a Flat Torus</h2>
+    <p>Every face is an equilateral triangle. Edges wrap around the boundaries.</p>
+    
+    <canvas id="torusCanvas" width="600" height="520"></canvas>
+
+    <div class="controls">
+        <p><strong>Vertices:</strong> 7 | <strong>Edges:</strong> 21 | <strong>Faces:</strong> 14 Triangles</p>
+        <p><small>Note: The triangles are equilateral in "lattice space." The vertical axis is scaled by √3/2 to preserve geometry.</small></p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('torusCanvas');
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
+        
+        // Scale factor for equilateral geometry
+        const unit = width / 7;
+        const hStep = unit * (Math.sqrt(3) / 2);
+
+        // Define the 7 vertices of K7
+        // We use a cyclic shift to distribute them across the torus
+        const vertices = [];
+        for (let i = 0; i < 7; i++) {
+            vertices.push({
+                id: i,
+                // Standard Heawood mapping for a flat torus
+                x: (i % 7) / 7,
+                y: ((3 * i) % 7) / 7
+            });
+        }
+
+        // Define the 14 faces (triangles)
+        // In K7, vertex i is connected to (i+1, i+2, i+3, i+4, i+5, i+6)
+        // The triangles are formed by triplets (i, i+1, i+3) and (i, i+2, i+3)
+        const faces = [];
+        for (let i = 0; i < 7; i++) {
+            faces.push([i, (i + 1) % 7, (i + 3) % 7]); // Set A
+            faces.push([i, (i + 2) % 7, (i + 3) % 7]); // Set B
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+
+            // 1. Draw periodic background grid
+            ctx.strokeStyle = '#eee';
+            ctx.lineWidth = 1;
+            for(let i=0; i<=7; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * (width/7), 0);
+                ctx.lineTo(i * (width/7), height);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(0, i * (height/7));
+                ctx.lineTo(width, i * (height/7));
+                ctx.stroke();
+            }
+
+            // 2. Draw Triangles (Faces)
+            faces.forEach((face, index) => {
+                const colors = ['#ffadad', '#ffd6a5', '#fdffb6', '#caffbf', '#9bf6ff', '#a0c4ff', '#bdb2ff'];
+                ctx.fillStyle = colors[index % colors.length] + '88'; // Semi-transparent
+                
+                // For a torus, drawing a filled triangle that "wraps" is tricky.
+                // We draw the triangle 9 times (3x3 grid) and clip to the center to show boundaries.
+                drawWrappedTriangle(face, colors[index % 7]);
+            });
+
+            // 3. Draw Vertices
+            vertices.forEach(v => {
+                const px = v.x * width;
+                const py = v.y * height;
+                
+                ctx.fillStyle = '#333';
+                ctx.beginPath();
+                ctx.arc(px, py, 6, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.font = 'bold 14px Arial';
+                ctx.fillText(v.id, px + 8, py - 8);
+            });
+        }
+
+        function drawWrappedTriangle(faceIndices, color) {
+            const v1 = vertices[faceIndices[0]];
+            const v2 = vertices[faceIndices[1]];
+            const v3 = vertices[faceIndices[2]];
+
+            // We draw the triangle in multiple tiled positions to handle the torus wrapping
+            for (let ox = -1; ox <= 1; ox++) {
+                for (let oy = -1; oy <= 1; oy++) {
+                    ctx.beginPath();
+                    
+                    const x1 = (v1.x + ox) * width;
+                    const y1 = (v1.y + oy) * height;
+                    const x2 = (v2.x + ox) * width;
+                    const y2 = (v2.y + oy) * height;
+                    const x3 = (v3.x + ox) * width;
+                    const y3 = (v3.y + oy) * height;
+
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
+                    ctx.lineTo(x3, y3);
+                    ctx.closePath();
+                    
+                    // Only fill if it's within the main viewport (simplified clipping)
+                    ctx.strokeStyle = '#666';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                    ctx.fill();
+                }
+            }
+        }
+
+        draw();
+    </script>
+</body>
+</html>
