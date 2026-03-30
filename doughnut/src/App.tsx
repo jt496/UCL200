@@ -92,8 +92,8 @@ function isGraphValid(vList: Vertex[], eList: Edge[]): boolean {
   return true;
 }
 
-function getMaxCliqueSize(vertices: Vertex[], edges: Edge[]): number {
-  if (vertices.length === 0) return 0;
+function getMaxClique(vertices: Vertex[], edges: Edge[]): Set<string> {
+  if (vertices.length === 0) return new Set();
   
   const adj = new Map<string, Set<string>>();
   vertices.forEach(v => adj.set(v.id, new Set()));
@@ -103,18 +103,18 @@ function getMaxCliqueSize(vertices: Vertex[], edges: Edge[]): number {
     adj.get(e.toId)?.add(e.fromId);
   });
 
-  let maxClique = 0;
+  let maxClique = new Set<string>();
 
   function bronKerbosch(r: Set<string>, p: Set<string>, x: Set<string>) {
     if (p.size === 0 && x.size === 0) {
-      maxClique = Math.max(maxClique, r.size);
+      if (r.size > maxClique.size) {
+        maxClique = new Set(r);
+      }
       return;
     }
     
-    // Pivot to prune search space
     const pivot = Array.from(new Set([...p, ...x]))[0];
     const neighborsOfPivot = adj.get(pivot) || new Set();
-    
     const candidates = Array.from(p).filter(v => !neighborsOfPivot.has(v));
     
     for (const v of candidates) {
@@ -149,7 +149,7 @@ function App() {
     x1: number; y1: number; x2: number; y2: number;
   } | null>(null);
 
-  const maxCliqueSize = useMemo(() => getMaxCliqueSize(vertices, edges), [vertices, edges]);
+  const maxClique = useMemo(() => getMaxClique(vertices, edges), [vertices, edges]);
 
   const saveToHistory = useCallback(() => {
     setHistory(prev => [...prev, { vertices, edges }].slice(-50)); // Keep last 50 steps
@@ -657,40 +657,14 @@ function App() {
       {!showHelp && (
         <div className="w-full h-full flex items-center justify-center px-10 py-12 sm:p-24 bg-black">
           <div className="relative">
-            {!is3D && (
-              <div 
-                style={{
-                  position: 'absolute',
-                  top: '0', // Inside the top of the rectangle
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  background: 'rgba(99, 102, 241, 0.9)', 
-                  color: 'white',
-                  padding: '3px 12px',
-                  borderRadius: '0 0 10px 10px', // Rounded bottom corners
-                  boxShadow: '0 2px 10px rgba(0, 0, 0, 0.5)',
-                  zIndex: 9999,
-                  fontWeight: '900',
-                  pointerEvents: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                  borderTop: 'none',
-                  whiteSpace: 'nowrap'
-                }}
-              >
-                <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.9 }}>Max Clique</span>
-                <span style={{ fontSize: '16px' }}>{maxCliqueSize}</span>
-              </div>
-            )}
             <div className={`relative w-full ${is3D ? 'h-full' : 'aspect-square max-h-[80vh] max-w-[80vh] bg-black rounded-2xl shadow-[0_0_80px_rgba(79,70,229,0.15)] border border-slate-800/50 overflow-hidden'}`}>
               {is3D ? (
-                <Torus3D vertices={vertices} edges={edges} />
+                <Torus3D vertices={vertices} edges={edges} maxClique={maxClique} />
               ) : (
                 <Canvas2D
                   vertices={vertices}
                   edges={edges}
+                  maxClique={maxClique}
                   currentTool={currentTool}
                   onAddVertex={addVertex}
                   onAddEdge={addEdge}

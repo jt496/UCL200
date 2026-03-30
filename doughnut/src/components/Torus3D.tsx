@@ -7,6 +7,7 @@ import type { Vertex, Edge } from '../App';
 interface Torus3DProps {
   vertices: Vertex[];
   edges: Edge[];
+  maxClique: Set<string>;
 }
 
 const R = 3; // Major radius
@@ -21,7 +22,7 @@ const mapToTorus = (u: number, v: number): THREE.Vector3 => {
   return new THREE.Vector3(x, y, z);
 };
 
-const EdgeLine: React.FC<{ edge: Edge, from: Vertex }> = ({ edge, from }) => {
+const EdgeLine: React.FC<{ edge: Edge, from: Vertex, highlight: boolean }> = ({ edge, from, highlight }) => {
   const points = useMemo(() => {
     const pts: THREE.Vector3[] = [];
     const steps = 60;
@@ -36,18 +37,18 @@ const EdgeLine: React.FC<{ edge: Edge, from: Vertex }> = ({ edge, from }) => {
 
   return (
     <mesh>
-      <tubeGeometry args={[curve, 128, 0.04, 12, false]} />
+      <tubeGeometry args={[curve, 128, highlight ? 0.07 : 0.04, 12, false]} />
       <meshStandardMaterial 
-        color="#818cf8" 
-        emissive="#4338ca" 
-        emissiveIntensity={2.5} 
+        color={highlight ? "#facc15" : "#818cf8"} 
+        emissive={highlight ? "#eab308" : "#4338ca"} 
+        emissiveIntensity={highlight ? 5 : 2.5} 
         toneMapped={false}
       />
     </mesh>
   );
 };
 
-export const Torus3D: React.FC<Torus3DProps> = ({ vertices, edges }) => {
+export const Torus3D: React.FC<Torus3DProps> = ({ vertices, edges, maxClique }) => {
   return (
     <div className="w-full h-full bg-black">
       <Canvas shadows gl={{ antialias: true }}>
@@ -85,24 +86,28 @@ export const Torus3D: React.FC<Torus3DProps> = ({ vertices, edges }) => {
         </Torus>
 
         {/* Glowing Vertices */}
-        {vertices.map(v => (
-          <mesh key={v.id} position={mapToTorus(v.x, v.y)}>
-            <sphereGeometry args={[0.12, 16, 16]} />
-            <meshStandardMaterial 
-              color="#ffffff" 
-              emissive="#ffffff" 
-              emissiveIntensity={2.5} 
-              toneMapped={false} 
-            />
-            <pointLight intensity={1} distance={2} color="#ffffff" />
-          </mesh>
-        ))}
+        {vertices.map(v => {
+          const isHighlighted = maxClique.has(v.id);
+          return (
+            <mesh key={v.id} position={mapToTorus(v.x, v.y)}>
+              <sphereGeometry args={[isHighlighted ? 0.18 : 0.12, 16, 16]} />
+              <meshStandardMaterial 
+                color={isHighlighted ? "#facc15" : "#ffffff"} 
+                emissive={isHighlighted ? "#facc15" : "#ffffff"} 
+                emissiveIntensity={isHighlighted ? 5 : 2.5} 
+                toneMapped={false} 
+              />
+              <pointLight intensity={isHighlighted ? 2 : 1} distance={isHighlighted ? 3 : 2} color={isHighlighted ? "#facc15" : "#ffffff"} />
+            </mesh>
+          );
+        })}
 
         {/* Glowing Edges */}
         {edges.map(edge => {
           const from = vertices.find(v => v.id === edge.fromId);
           if (!from) return null;
-          return <EdgeLine key={edge.id} edge={edge} from={from} />;
+          const isHighlighted = maxClique.size > 1 && maxClique.has(edge.fromId) && maxClique.has(edge.toId);
+          return <EdgeLine key={edge.id} edge={edge} from={from} highlight={isHighlighted} />;
         })}
       </Canvas>
     </div>

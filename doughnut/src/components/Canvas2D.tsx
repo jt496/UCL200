@@ -16,10 +16,11 @@ interface Canvas2DProps {
   onEndMove: () => void;
   crossingInfo: { x1: number, y1: number, x2: number, y2: number, x3: number, y3: number, x4: number, y4: number } | null;
   duplicateEdgeInfo: { x1: number, y1: number, x2: number, y2: number } | null;
+  maxClique: Set<string>;
 }
 
 export const Canvas2D: React.FC<Canvas2DProps> = ({
-  vertices, edges, currentTool, onAddVertex, onAddEdge, onRemoveVertex, onRemoveEdge, onMoveVertex, onStartMove, onEndMove, crossingInfo, duplicateEdgeInfo
+  vertices, edges, currentTool, onAddVertex, onAddEdge, onRemoveVertex, onRemoveEdge, onMoveVertex, onStartMove, onEndMove, crossingInfo, duplicateEdgeInfo, maxClique
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -319,12 +320,16 @@ export const Canvas2D: React.FC<Canvas2DProps> = ({
 
       // Edges
       ctx.lineWidth = 3;
-      ctx.strokeStyle = '#818cf8';
       ctx.shadowBlur = 10;
-      ctx.shadowColor = '#4f46e5';
       edges.forEach(edge => {
         const from = vertices.find(v => v.id === edge.fromId);
-        if (from) drawWrappedLine(ctx, from.x, from.y, from.x + edge.dx, from.y + edge.dy, sw, sh);
+        if (from) {
+          const isHighlighted = maxClique.size > 1 && maxClique.has(edge.fromId) && maxClique.has(edge.toId);
+          ctx.strokeStyle = isHighlighted ? '#facc15' : '#818cf8';
+          ctx.shadowColor = isHighlighted ? '#eab308' : '#4f46e5';
+          ctx.lineWidth = isHighlighted ? 5 : 3;
+          drawWrappedLine(ctx, from.x, from.y, from.x + edge.dx, from.y + edge.dy, sw, sh);
+        }
       });
       ctx.shadowBlur = 0;
 
@@ -356,20 +361,20 @@ export const Canvas2D: React.FC<Canvas2DProps> = ({
 
       // Vertices
       vertices.forEach(v => {
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = '#818cf8';
-        ctx.fillStyle = '#020617';
-        ctx.strokeStyle = '#818cf8';
-        ctx.lineWidth = 2.5;
+        const isHighlighted = maxClique.has(v.id);
+        ctx.shadowBlur = isHighlighted ? 25 : 15;
+        ctx.shadowColor = isHighlighted ? '#facc15' : '#818cf8';
+        ctx.fillStyle = isHighlighted ? '#facc15' : '#020617';
+        ctx.strokeStyle = isHighlighted ? '#ffffff' : '#818cf8';
+        ctx.lineWidth = isHighlighted ? 4 : 2.5;
 
         for (let ox = -1; ox <= 1; ox++) {
           for (let oy = -1; oy <= 1; oy++) {
             const vx = v.x + ox;
             const vy = v.y + oy;
-            // Only draw if it's within or slightly outside the clipping region for shadow/glow consistency
             if (vx > -0.2 && vx < 1.2 && vy > -0.2 && vy < 1.2) {
               ctx.beginPath();
-              ctx.arc(toScreenX(vx, sw), toScreenY(vy, sh), 9, 0, Math.PI * 2);
+              ctx.arc(toScreenX(vx, sw), toScreenY(vy, sh), isHighlighted ? 11 : 9, 0, Math.PI * 2);
               ctx.fill();
               ctx.stroke();
             }
