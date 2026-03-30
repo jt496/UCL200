@@ -661,14 +661,14 @@ function App() {
               <div 
                 style={{
                   position: 'absolute',
-                  bottom: 'calc(100% + 2px)', // Very close to the rectangle
+                  top: '0', // Inside the top of the rectangle
                   left: '50%',
                   transform: 'translateX(-50%)',
-                  background: 'rgba(99, 102, 241, 0.9)', // Indigo 600 with some transparency
+                  background: 'rgba(99, 102, 241, 0.9)', 
                   color: 'white',
-                  padding: '4px 12px',
-                  borderRadius: '10px 10px 0 0', // Rounded top corners only for a 'tab' look
-                  boxShadow: '0 -2px 10px rgba(99, 102, 241, 0.3)',
+                  padding: '3px 12px',
+                  borderRadius: '0 0 10px 10px', // Rounded bottom corners
+                  boxShadow: '0 2px 10px rgba(0, 0, 0, 0.5)',
                   zIndex: 9999,
                   fontWeight: '900',
                   pointerEvents: 'none',
@@ -676,7 +676,7 @@ function App() {
                   alignItems: 'center',
                   gap: '6px',
                   border: '1px solid rgba(255, 255, 255, 0.3)',
-                  borderBottom: 'none',
+                  borderTop: 'none',
                   whiteSpace: 'nowrap'
                 }}
               >
