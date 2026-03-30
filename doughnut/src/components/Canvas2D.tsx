@@ -483,6 +483,7 @@ export const Canvas2D: React.FC<Canvas2DProps> = ({
   }, [vertices, edges, activeDrag, crossingInfo, duplicateEdgeInfo]);
 
   return (
+    <>
     <canvas
       ref={canvasRef}
       onMouseDown={(e) => {
@@ -518,5 +519,11 @@ export const Canvas2D: React.FC<Canvas2DProps> = ({
         }`}
       style={{ touchAction: 'none' }}
     />
+    {maxClique.size >= 3 && (
+      <div className="absolute bottom-4 left-4 text-xs font-mono text-slate-500 pointer-events-none opacity-40">
+        Largest Clique Found: {maxClique.size} vertices
+      </div>
+    )}
+    </>
   );
 };

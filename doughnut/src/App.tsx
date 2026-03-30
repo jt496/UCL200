@@ -93,7 +93,8 @@ function isGraphValid(vList: Vertex[], eList: Edge[]): boolean {
 }
 
 function getMaxClique(vertices: Vertex[], edges: Edge[]): Set<string> {
-  if (vertices.length === 0) return new Set();
+  const n = vertices.length;
+  if (n === 0) return new Set();
   
   const adj = new Map<string, Set<string>>();
   vertices.forEach(v => adj.set(v.id, new Set()));
@@ -102,31 +103,33 @@ function getMaxClique(vertices: Vertex[], edges: Edge[]): Set<string> {
     adj.get(e.toId)?.add(e.fromId);
   });
 
-  let maxSet = new Set<string>();
+  let maxR: string[] = [];
 
-  function find(r: string[], p: string[], x: string[]) {
+  function solve(r: string[], p: string[], x: string[]) {
     if (p.length === 0 && x.length === 0) {
-      if (r.length > maxSet.size) {
-        maxSet = new Set(r);
-      }
+      if (r.length > maxR.length) maxR = [...r];
       return;
     }
+    if (r.length + p.length <= maxR.length) return;
     
-    const candidates = [...p];
+    const pivot = [...p, ...x][0];
+    const pNeighbors = adj.get(pivot) || new Set();
+    const candidates = p.filter(v => !pNeighbors.has(v));
+
     for (const v of candidates) {
-      const neighbors = adj.get(v)!;
-      find(
+      const vNeighbors = adj.get(v)!;
+      solve(
         [...r, v],
-        p.filter(n => neighbors.has(n)),
-        x.filter(n => neighbors.has(n))
+        p.filter(n => vNeighbors.has(n)),
+        x.filter(n => vNeighbors.has(n))
       );
       p = p.filter(n => n !== v);
       x.push(v);
     }
   }
 
-  find([], vertices.map(v => v.id), []);
-  return maxSet;
+  solve([], vertices.map(v => v.id), []);
+  return new Set(maxR);
 }
 
 function App() {
