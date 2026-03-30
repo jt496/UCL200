@@ -661,25 +661,27 @@ function App() {
               <div 
                 style={{
                   position: 'absolute',
-                  bottom: 'calc(100% + 10px)', // Just above the rectangle
-                  right: '0',
-                  background: '#6366f1', // Indigo 600
+                  bottom: 'calc(100% + 2px)', // Very close to the rectangle
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  background: 'rgba(99, 102, 241, 0.9)', // Indigo 600 with some transparency
                   color: 'white',
-                  padding: '6px 16px',
-                  borderRadius: '12px',
-                  boxShadow: '0 0 20px rgba(99, 102, 241, 0.4)',
+                  padding: '4px 12px',
+                  borderRadius: '10px 10px 0 0', // Rounded top corners only for a 'tab' look
+                  boxShadow: '0 -2px 10px rgba(99, 102, 241, 0.3)',
                   zIndex: 9999,
                   fontWeight: '900',
                   pointerEvents: 'none',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  border: '2px solid rgba(255, 255, 255, 0.2)',
+                  gap: '6px',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  borderBottom: 'none',
                   whiteSpace: 'nowrap'
                 }}
               >
-                <span style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.8 }}>Max Clique</span>
-                <span style={{ fontSize: '20px' }}>{maxCliqueSize}</span>
+                <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.9 }}>Max Clique</span>
+                <span style={{ fontSize: '16px' }}>{maxCliqueSize}</span>
               </div>
             )}
             <div className={`relative w-full ${is3D ? 'h-full' : 'aspect-square max-h-[80vh] max-w-[80vh] bg-black rounded-2xl shadow-[0_0_80px_rgba(79,70,229,0.15)] border border-slate-800/50 overflow-hidden'}`}>
