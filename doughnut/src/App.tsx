@@ -97,40 +97,36 @@ function getMaxClique(vertices: Vertex[], edges: Edge[]): Set<string> {
   
   const adj = new Map<string, Set<string>>();
   vertices.forEach(v => adj.set(v.id, new Set()));
-  
   edges.forEach(e => {
     adj.get(e.fromId)?.add(e.toId);
     adj.get(e.toId)?.add(e.fromId);
   });
 
-  let maxClique = new Set<string>();
+  let maxSet = new Set<string>();
 
-  function bronKerbosch(r: Set<string>, p: Set<string>, x: Set<string>) {
-    if (p.size === 0 && x.size === 0) {
-      if (r.size > maxClique.size) {
-        maxClique = new Set(r);
+  function find(r: string[], p: string[], x: string[]) {
+    if (p.length === 0 && x.length === 0) {
+      if (r.length > maxSet.size) {
+        maxSet = new Set(r);
       }
       return;
     }
     
-    const pivot = Array.from(new Set([...p, ...x]))[0];
-    const neighborsOfPivot = adj.get(pivot) || new Set();
-    const candidates = Array.from(p).filter(v => !neighborsOfPivot.has(v));
-    
+    const candidates = [...p];
     for (const v of candidates) {
-      const neighborsOfV = adj.get(v) || new Set();
-      bronKerbosch(
-        new Set([...r, v]),
-        new Set(Array.from(p).filter(node => neighborsOfV.has(node))),
-        new Set(Array.from(x).filter(node => neighborsOfV.has(node)))
+      const neighbors = adj.get(v)!;
+      find(
+        [...r, v],
+        p.filter(n => neighbors.has(n)),
+        x.filter(n => neighbors.has(n))
       );
-      p.delete(v);
-      x.add(v);
+      p = p.filter(n => n !== v);
+      x.push(v);
     }
   }
 
-  bronKerbosch(new Set(), new Set(vertices.map(v => v.id)), new Set());
-  return maxClique;
+  find([], vertices.map(v => v.id), []);
+  return maxSet;
 }
 
 function App() {
@@ -155,17 +151,23 @@ function App() {
     const prev = lastClique.current;
 
     if (prev.size > 0) {
-      const verticesExist = Array.from(prev).every(id => vertices.some(v => v.id === id));
+      const adj = new Map<string, Set<string>>();
+      vertices.forEach(v => adj.set(v.id, new Set()));
+      edges.forEach(e => {
+        adj.get(e.fromId)?.add(e.toId);
+        adj.get(e.toId)?.add(e.fromId);
+      });
+
+      const ids = Array.from(prev);
+      const verticesExist = ids.every(id => adj.has(id));
       if (verticesExist) {
-        const ids = Array.from(prev);
         let isStillClique = true;
         for (let i = 0; i < ids.length; i++) {
           for (let j = i + 1; j < ids.length; j++) {
-            const hasEdge = edges.some(e => 
-              (e.fromId === ids[i] && e.toId === ids[j]) || 
-              (e.fromId === ids[j] && e.toId === ids[i])
-            );
-            if (!hasEdge) { isStillClique = false; break; }
+            if (!adj.get(ids[i])?.has(ids[j])) {
+              isStillClique = false;
+              break;
+            }
           }
           if (!isStillClique) break;
         }

@@ -90,14 +90,14 @@ export const Torus3D: React.FC<Torus3DProps> = ({ vertices, edges, maxClique }) 
           const isHighlighted = maxClique.size >= 3 && maxClique.has(v.id);
           return (
             <mesh key={v.id} position={mapToTorus(v.x, v.y)}>
-              <sphereGeometry args={[isHighlighted ? 0.18 : 0.12, 16, 16]} />
+              <sphereGeometry args={[isHighlighted ? 0.22 : 0.12, 24, 24]} />
               <meshStandardMaterial 
                 color={isHighlighted ? "#facc15" : "#ffffff"} 
-                emissive="#ffffff" 
-                emissiveIntensity={isHighlighted ? 3 : 2.5} 
+                emissive={isHighlighted ? "#fbbf24" : "#ffffff"} 
+                emissiveIntensity={isHighlighted ? 8 : 2.5} 
                 toneMapped={false} 
               />
-              <pointLight intensity={isHighlighted ? 2 : 1} distance={isHighlighted ? 3 : 2} color={isHighlighted ? "#facc15" : "#ffffff"} />
+              <pointLight intensity={isHighlighted ? 6 : 1} distance={isHighlighted ? 5 : 2} color={isHighlighted ? "#facc15" : "#ffffff"} />
             </mesh>
           );
         })}
