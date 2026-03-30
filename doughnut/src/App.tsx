@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Canvas2D } from './components/Canvas2D';
 import { Torus3D } from './components/Torus3D';
 import { Layout, Donut, Trash2, HelpCircle, Save, FolderOpen, Undo2, CircleDot, ArrowRight, Lock, Unlock, Eraser } from 'lucide-react';
@@ -149,7 +149,37 @@ function App() {
     x1: number; y1: number; x2: number; y2: number;
   } | null>(null);
 
-  const maxClique = useMemo(() => getMaxClique(vertices, edges), [vertices, edges]);
+  const [highlightedClique, setHighlightedClique] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const newMaxClique = getMaxClique(vertices, edges);
+    
+    // Check if previous clique is still valid and maximal
+    const prevExists = highlightedClique.size > 0 && Array.from(highlightedClique).every(id => vertices.some(v => v.id === id));
+    let stillCliqueAndMax = false;
+    
+    if (prevExists) {
+      const ids = Array.from(highlightedClique);
+      let isClique = true;
+      for (let i = 0; i < ids.length; i++) {
+        for (let j = i + 1; j < ids.length; j++) {
+          const hasEdge = edges.some(e => 
+            (e.fromId === ids[i] && e.toId === ids[j]) || 
+            (e.fromId === ids[j] && e.toId === ids[i])
+          );
+          if (!hasEdge) { isClique = false; break; }
+        }
+        if (!isClique) break;
+      }
+      if (isClique && highlightedClique.size >= newMaxClique.size) {
+        stillCliqueAndMax = true;
+      }
+    }
+
+    if (!stillCliqueAndMax) {
+      setHighlightedClique(newMaxClique);
+    }
+  }, [vertices, edges, highlightedClique]);
 
   const saveToHistory = useCallback(() => {
     setHistory(prev => [...prev, { vertices, edges }].slice(-50)); // Keep last 50 steps
@@ -655,30 +685,28 @@ function App() {
 
       {/* Main Content Area */}
       {!showHelp && (
-        <div className="w-full h-full flex items-center justify-center px-10 py-12 sm:p-24 bg-black">
-          <div className={`relative ${is3D ? 'w-full h-full' : ''}`}>
-            <div className={`relative w-full ${is3D ? 'h-full' : 'aspect-square max-h-[80vh] max-w-[80vh] bg-black rounded-2xl shadow-[0_0_80px_rgba(79,70,229,0.15)] border border-slate-800/50 overflow-hidden'}`}>
-              {is3D ? (
-                <Torus3D vertices={vertices} edges={edges} maxClique={maxClique} />
-              ) : (
-                <Canvas2D
-                  vertices={vertices}
-                  edges={edges}
-                  maxClique={maxClique}
-                  currentTool={currentTool}
-                  onAddVertex={addVertex}
-                  onAddEdge={addEdge}
-                  onRemoveVertex={removeVertex}
-                  onRemoveEdge={removeEdge}
-                  onMoveVertex={moveVertex}
-                  onStartMove={saveToHistory}
-                  onEndMove={endMove}
-                  crossingInfo={crossingInfo}
-                  duplicateEdgeInfo={duplicateEdgeInfo}
-                />
-              )}
+        <div className={`w-full h-full bg-black ${is3D ? '' : 'flex items-center justify-center p-6 sm:p-24'}`}>
+          {is3D ? (
+            <Torus3D vertices={vertices} edges={edges} maxClique={highlightedClique} />
+          ) : (
+            <div className="relative w-full aspect-square max-h-[80vh] max-w-[80vh] bg-black rounded-2xl shadow-[0_0_80px_rgba(79,70,229,0.15)] border border-slate-800/50 overflow-hidden">
+              <Canvas2D
+                vertices={vertices}
+                edges={edges}
+                maxClique={highlightedClique}
+                currentTool={currentTool}
+                onAddVertex={addVertex}
+                onAddEdge={addEdge}
+                onRemoveVertex={removeVertex}
+                onRemoveEdge={removeEdge}
+                onMoveVertex={moveVertex}
+                onStartMove={saveToHistory}
+                onEndMove={endMove}
+                crossingInfo={crossingInfo}
+                duplicateEdgeInfo={duplicateEdgeInfo}
+              />
             </div>
-          </div>
+          )}
         </div>
       )}
     </div>
