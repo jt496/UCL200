@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Canvas2D } from './components/Canvas2D';
 import { Torus3D } from './components/Torus3D';
-import { Layout, Donut, Trash2, HelpCircle, Save, FolderOpen, Undo2, CircleDot, ArrowRight, Lock, Unlock, Eraser, Code2 } from 'lucide-react';
+import { Layout, Donut, Trash2, HelpCircle, Save, FolderOpen, Undo2, CircleDot, ArrowRight, Lock, Unlock, Eraser } from 'lucide-react';
 
 export type Vertex = {
   id: string;
@@ -665,6 +665,17 @@ function App() {
     URL.revokeObjectURL(url);
   };
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'X') {
+        e.preventDefault();
+        generateTikZ();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [generateTikZ]);
+
   const clearGraph = () => {
     if (confirm("Clear entire graph?")) {
       saveToHistory();
@@ -786,9 +797,6 @@ function App() {
             </button>
             <button onClick={clearGraph} className="p-2 sm:p-3 bg-slate-900 hover:bg-red-900 rounded-xl border border-slate-700/50 shadow-lg transition-all active:scale-95" title="Clear">
               <Trash2 size={18} className="sm:w-5 sm:h-5" />
-            </button>
-            <button onClick={generateTikZ} className="p-2 sm:p-3 bg-slate-900 hover:bg-slate-800 rounded-xl border border-slate-700/50 shadow-lg transition-all active:scale-95" title="Export TikZ">
-              <Code2 size={18} className="sm:w-5 sm:h-5" />
             </button>
           </div>
         </div>

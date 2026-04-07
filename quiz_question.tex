@@ -9,7 +9,7 @@
 \usepackage{tikz}
 %%%%%%%%%%%%%%%%%%  compile full/short version
 \newif\iffullversion 
-\fullversiontrue  % Leave this to compile the full version, comment out for short version
+%\fullversiontrue  % Leave this to compile the full version, comment out for short version
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \usetikzlibrary{shapes, positioning, arrows.meta}
 
@@ -22,7 +22,7 @@
 \maketitle
 
 \section*{Colouring Maps}
-In 1852, Francis Guthrie  (a former Mathematics student at UCL) noticed that four colours seemed sufficient to colour any map so that no two adjacent regions shared the same colour. He shared this observation with his brother Frederick, who was at the time a Mathematics student at UCL, who then brought it to the attention of their professor, Augustus De Morgan. T
+In 1852, Francis Guthrie  (a former Mathematics student at UCL) noticed that four colours seemed sufficient to colour any map so that no two adjacent regions shared the same colour. He shared this observation with his brother Frederick, who was at the time a Mathematics student at UCL, Frederick then brought it to the attention of their professor, Augustus De Morgan. 
 
 This problem took another 124 years to solve and even today the only known proofs require a computer to verify parts of the argument.
 
@@ -259,105 +259,6 @@ We also need to use the fact that if a graph has at least 3 vertices and no loop
 
 Putting these two facts together we can check whether $K_8$ can be drawn on a torus without edges crossing. Since $K_8$ has 8 vertices and $\binom{8}{2} = 28$ edges, if we could draw it on a torus without edges crossing then we would have $V=8$ and $E=28$. Using the inequality $3F \le 2E$ we have 
 \[F \le \frac{2E}{3} = \frac{2 \cdot 28}{3} = \frac{56}{3}.\] Putting this into the Euler characteristic formula we have \[V - E + F \le 8 - 28 + \frac{56}{3} = -\frac{4}{3} < 0,\] which contradicts(\ref{EC:eq}). So $K_8$ cannot be drawn on a torus without edges crossing.
-
-% From here to proving that \emph{every} graph that can be drawn on a torus can be coloured with 7 colours is a bit more technical, but the key idea is the following: if every graph that can be drawn on a torus contains a vertex that belongs to at most 6 edges then we can colour the graph with 7 colours "by induction". [More formally: we can easily colour any graph with at most 7 vertices using 7 colours -- simply give each vertex a different colour. Now suppose we have a graph with $n>7$ vertices. If we can find a vertex $v$ that belongs to at most 6 edges, we can remove it from the graph, colour the remaining $n-1$ vertices with 7 colours (by our inductive hypothesis), and then colour $v$ with one of the colours that is not used by any of its neighbours (since $v$ has at most 6 neighbour there is always a colour available).]
-
-
-
-
-% we can use the following argument. If we could draw $K_8$ on a torus without edges crossing, then we would have a graph with 8 vertices and 28 edges (since $K_8$ has $\frac{8 \cdot 7}{2} = 28$ edges). However, using Euler's formula for a torus ($V - E + F = 0$) we can derive the inequality $E \le 3V$, which tells us that any graph drawn on a torus can have at most $3 \cdot 8 = 24$ edges. Since $K_8$ has more than 24 edges, it cannot be drawn on a torus without edges crossing.
-
-% \section*{Why does 7 suffice?}
-% The key idea is the following: if every graph that can be drawn on a torus contains a vertex that belongs to at most 6 edges then we can colour the graph with 7 colours "by induction". [More formally: we can easily colour any graph with at most 7 vertices using 7 colours -- simply give each vertex a different colour. Now suppose we have a graph with $n>7$ vertices. If we can find a vertex $v$ that belongs to at most 6 edges, we can remove it from the graph, colour the remaining $n-1$ vertices with 7 colours (by our inductive hypothesis), and then colour $v$ with one of the colours that is not used by any of its neighbours (since $v$ has at most 6 neighbour there is always a colour available).]
-
-% So how do we show that any graph that can be drawn on the torus contains a vertex that belongs to at most 6 edges?
-
-% There is a magical formula (called the Euler characteristic) that tells us how the number of vertices ($V$), edges ($E$), and faces ($F$) of a graph drawn on a surface are related. For a torus the formula says that: 
-% \begin{equation}\label{EC:eq}
-% V =  E - F.
-% \end{equation}
-% Any face of a graph contains at least 3 edges, and each edge belongs to exactly 2 faces so this tells us that $2E \ge 3F$, so using (\ref{EC:eq}) we have 
-% \[
-% 6V = 6E - 6F \le 6E - 4E = 2E.
-% \]
-% This tells us that the average number of edges a vertex belongs to is 6, which means that there must be at least one vertex that belongs to at most 6 edges!
 \fi
 \end{document}
 
-% \subsection*{Colouring Complete Graphs and Cycles}
-% The minimum number of colours needed to colour a graph is called its \textbf{chromatic number}, denoted $\chi(G)$.
-
-% As a warm-up question can we work out how many colours we need to colour the following graphs?
-
-
-% \begin{enumerate}
-%     \item \textbf{Complete Graphs ($K_n$)}: Since every vertex is connected to every other vertex, every vertex must have a unique colour. Thus, $\chi(K_n) = n$.
-% \end{enumerate}
-
-% \begin{center}
-% \begin{tikzpicture}[scale=1.2, every node/.style={circle, draw, minimum size=0.8cm, font=\bfseries}]
-%     \node[fill=red!30] (A) at (90:1.2) {1};
-%     \node[fill=green!30] (B) at (210:1.2) {2};
-%     \node[fill=blue!30] (C) at (330:1.2) {3};
-%     \draw[thick] (A) -- (B) -- (C) -- (A);
-%     \node[draw=none, fill=none] at (0,-1.5) {$\chi(K_3) = 3$};
-% \end{tikzpicture}
-% \end{center}
-
-% \begin{enumerate}
-%     \setcounter{enumi}{1}
-%     \item \textbf{Cycles ($C_n$)}: A cycle consists of vertices connected in a single loop. 
-%     \begin{itemize}
-%         \item If $n$ is even, we can alternate between 2 colours: $\chi(C_{\text{even}}) = 2$.
-%         \item If $n$ is odd, the last vertex will always conflict with the first if we only have 2 colours: $\chi(C_{\text{odd}}) = 3$.
-%     \end{itemize}
-% \end{enumerate}
-
-% \begin{center}
-% \begin{tikzpicture}[scale=1.2, every node/.style={circle, draw, minimum size=0.8cm, font=\bfseries}]
-%     \node[fill=red!30] (1) at (90:1.2) {1};
-%     \node[fill=green!30] (2) at (18:1.2) {2};
-%     \node[fill=red!30] (3) at (306:1.2) {1};
-%     \node[fill=green!30] (4) at (234:1.2) {2};
-%     \node[fill=blue!30] (5) at (162:1.2) {3};
-%     \draw[thick] (1) -- (2) -- (3) -- (4) -- (5) -- (1);
-%     \node[draw=none, fill=none] at (0,-1.8) {$\chi(C_5) = 3$};
-% \end{tikzpicture}
-% \end{center}
-
-
-% \section*{Question 1: Planarity and Complete Graphs}
-% A complete graph $K_n$ is a graph where every vertex is connected to every other vertex by a unique edge.
-
-% \begin{enumerate}
-%     \item Show that for any simple planar graph, $E \le 3V - 6$. (Hint: Every face must have at least 3 edges).
-%     \item Use this inequality to prove that $K_5$ is not planar, but $K_4$ is.
-%     \item Below is an illustration of $K_4$ drawn without any edges crossing.
-% \end{enumerate}
-
-% \begin{center}
-% \begin{tikzpicture}[scale=1.5, every node/.style={circle, fill=blue!20, draw, minimum size=0.8cm, font=\bfseries}]
-%     % Define vertices of K4
-%     \node (A) at (0, 0) {1};
-%     \node (B) at (2, 0) {2};
-%     \node (C) at (1, 1.732) {3};
-%     \node (D) at (1, 0.6) {4};
-
-%     % Draw edges for planar K4
-%     \draw[thick] (A) -- (B);
-%     \draw[thick] (B) -- (C);
-%     \draw[thick] (C) -- (A);
-%     \draw[thick] (A) -- (D);
-%     \draw[thick] (B) -- (D);
-%     \draw[thick] (C) -- (D);
-% \end{tikzpicture}
-% \end{center}
-
-% \section*{Question 2: Graphs on a Torus}
-% Now imagine we are drawing our graph on a torus (a surface with one hole).
-
-% \begin{enumerate}
-%     \item Using Euler's formula for a torus ($V - E + F = 0$), derive the equivalent inequality for the number of edges: $E \le 3V$.
-%     \item A complete graph $K_n$ has $E = \frac{n(n-1)}{2}$ edges. Calculate the maximum value of $n$ such that $K_n$ can be embedded on a torus without any edges crossing.
-%     \item Why does this imply that while maps on a plane require 4 colours, maps on a torus can require up to 7?
-% \end{enumerate}
