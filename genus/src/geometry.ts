@@ -85,7 +85,7 @@ export function firstCrossing(
     const ry = A.y - start.y;
     const t = (rx * ey - ry * ex) / det;
     const s = (rx * d.y - ry * d.x) / det;
-    if (t > EPS && s >= -EPS && s <= 1 + EPS) {
+    if (t > EPS && t <= 1 && s >= -EPS && s <= 1 + EPS) {
       if (best === null || t < best.t) {
         best = {
           t,
