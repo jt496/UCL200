@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Canvas2D } from './components/Canvas2D';
 import { Torus3D } from './components/Torus3D';
-import { Layout, Donut, Trash2, HelpCircle, Save, FolderOpen, Undo2, CircleDot, ArrowRight, Lock, Unlock, Eraser } from 'lucide-react';
+import { Layout, Donut, Trash2, HelpCircle, Save, FolderOpen, Undo2, CircleDot, ArrowRight, Lock, Unlock, Eraser, Code2 } from 'lucide-react';
 
 export type Vertex = {
   id: string;
@@ -524,6 +524,147 @@ function App() {
   };
 
 
+  const generateTikZ = () => {
+    const R = 3, r = 1;
+    const vLabel = new Map<string, string>();
+    vertices.forEach((v, i) => vLabel.set(v.id, `v${i + 1}`));
+
+    const lines: string[] = [];
+    lines.push(`% Requires: \\usepackage{tikz,xcolor}`);
+    lines.push(`% Colors used: violet!60!blue for edges/vertices, orange!80!yellow for clique`);
+    lines.push(``);
+
+    if (!is3D) {
+      // ---- 2D flat torus ----
+      // Canvas y=0 is top; TikZ y=0 is bottom — flip all y coordinates
+      const fy = (y: number) => 1 - y;
+      lines.push(`% --- 2D Flat Torus Representation ---`);
+      lines.push(`\\begin{tikzpicture}[scale=6]`);
+      lines.push(`  \\draw[gray!40, thin] (0,0) rectangle (1,1);`);
+      lines.push(`  \\begin{scope}`);
+      lines.push(`    \\clip (-0.005,-0.005) rectangle (1.005,1.005);`);
+      edges.forEach(edge => {
+        const from = vertices.find(v => v.id === edge.fromId);
+        if (!from) return;
+        const isH = highlightedClique.size >= 3 && highlightedClique.has(edge.fromId) && highlightedClique.has(edge.toId);
+        const style = isH ? 'thick, orange!80!yellow' : 'violet!60!blue';
+        const ax = from.x, ay = fy(from.y);
+        const bx = from.x + edge.dx, by = fy(from.y + edge.dy);
+        for (let ox = -1; ox <= 1; ox++) {
+          for (let oy = -1; oy <= 1; oy++) {
+            const x1 = (ax + ox).toFixed(4), y1 = (ay - oy).toFixed(4);
+            const x2 = (bx + ox).toFixed(4), y2 = (by - oy).toFixed(4);
+            lines.push(`    \\draw[${style}] (${x1},${y1}) -- (${x2},${y2});`);
+          }
+        }
+      });
+      lines.push(`  \\end{scope}`);
+      lines.push(`  % Torus identification borders (green = left/right, red = top/bottom)`);
+      lines.push(`  \\draw[green!70!black, line width=1.5pt] (0,0) -- (0,1);`);
+      lines.push(`  \\draw[green!70!black, line width=1.5pt] (1,0) -- (1,1);`);
+      lines.push(`  \\draw[red, line width=1.5pt] (0,0) -- (1,0);`);
+      lines.push(`  \\draw[red, line width=1.5pt] (0,1) -- (1,1);`);
+      vertices.forEach(v => {
+        lines.push(`  \\filldraw[fill=black, draw=violet!60!blue] (${v.x.toFixed(4)},${fy(v.y).toFixed(4)}) circle (0.6pt); % ${vLabel.get(v.id)}`);
+      });
+      lines.push(`\\end{tikzpicture}`);
+    } else {
+      // ---- 3D projected torus ----
+      const mapToTorus3D = (u: number, v: number): [number, number, number] => {
+        const theta = u * Math.PI * 2;
+        const phi = v * Math.PI * 2;
+        return [
+          (R + r * Math.cos(phi)) * Math.cos(theta),
+          (R + r * Math.cos(phi)) * Math.sin(theta),
+          r * Math.sin(phi),
+        ];
+      };
+      // Slight tilt: rotate around X by 25° so torus tips toward viewer
+      const tilt = 25 * Math.PI / 180;
+      // Returns [px, py, sortDepth, z3]
+      // sortDepth used for painter's sort; z3 used for front/back opacity (z3>0 = near side of tube)
+      const projectD = (x3: number, y3: number, z3: number): [number, number, number, number] => {
+        const py = y3 * Math.cos(tilt) - z3 * Math.sin(tilt);
+        const sortDepth = y3 * Math.sin(tilt) + z3 * Math.cos(tilt);
+        return [x3, py, sortDepth, z3];
+      };
+
+      const emitDepthSplitLine = (pts: [number, number, number, number][], baseStyle: string, output: string[]) => {
+        if (pts.length === 0) return;
+        let run: [number, number][] = [];
+        let isFront = pts[0][3] >= 0;
+        const flush = (front: boolean) => {
+          if (run.length < 2) { run = []; return; }
+          const opacity = front ? 0.9 : 0.2;
+          const seg = run.map(([x, y], i) => (i === 0 ? '' : '-- ') + `(${x.toFixed(3)},${y.toFixed(3)})`).join(' ');
+          output.push(`  \\draw[${baseStyle}, opacity=${opacity}] ${seg};`);
+          run = [];
+        };
+        for (const [px, py, , z3] of pts) {
+          const front = z3 >= 0;
+          if (front !== isFront) { flush(isFront); isFront = front; }
+          run.push([px, py]);
+        }
+        flush(isFront);
+      };
+
+      type DrawItem = { depth: number; line: string };
+      const items3D: DrawItem[] = [];
+
+      const torusCircles: Array<{ pts: [number, number, number, number][]; style: string }> = [];
+      const outerPts3 = Array.from({ length: 65 }, (_, i) => { const [a, b, c] = mapToTorus3D(i / 64, 0); return projectD(a, b, c); });
+      const innerPts3 = Array.from({ length: 65 }, (_, i) => { const [a, b, c] = mapToTorus3D(i / 64, 0.5); return projectD(a, b, c); });
+      torusCircles.push({ pts: outerPts3, style: 'gray!60, thin' });
+      torusCircles.push({ pts: innerPts3, style: 'gray!60, thin' });
+      [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875].forEach(u => {
+        const mPts = Array.from({ length: 33 }, (_, i) => { const [a, b, c] = mapToTorus3D(u, i / 32); return projectD(a, b, c); });
+        torusCircles.push({ pts: mPts, style: 'gray!35, very thin' });
+      });
+
+      const wireLines: string[] = [];
+      torusCircles.forEach(({ pts, style }) => emitDepthSplitLine(pts, style, wireLines));
+
+      edges.forEach(edge => {
+        const from = vertices.find(v => v.id === edge.fromId);
+        if (!from) return;
+        const isH = highlightedClique.size >= 3 && highlightedClique.has(edge.fromId) && highlightedClique.has(edge.toId);
+        const baseStyle = isH ? 'thick, orange!80!yellow' : 'violet!60!blue';
+        const ePts = Array.from({ length: 31 }, (_, i) => {
+          const t = i / 30;
+          const [a, b, c] = mapToTorus3D(from.x + edge.dx * t, from.y + edge.dy * t);
+          return projectD(a, b, c);
+        });
+        const avgDepth = ePts.reduce((s, p) => s + p[2], 0) / ePts.length;
+        const edgeLines: string[] = [];
+        emitDepthSplitLine(ePts, baseStyle, edgeLines);
+        items3D.push({ depth: avgDepth, line: edgeLines.join('\n') });
+      });
+
+      vertices.forEach(v => {
+        const [a, b, c] = mapToTorus3D(v.x, v.y);
+        const [px, py, sortDepth, z3] = projectD(a, b, c);
+        const opacity = z3 >= 0 ? 0.95 : 0.25;
+        items3D.push({ depth: sortDepth, line: `  \\filldraw[fill=violet!40!blue, draw=violet!60!blue, opacity=${opacity}] (${px.toFixed(3)},${py.toFixed(3)}) circle (4pt); % ${vLabel.get(v.id)}` });
+      });
+
+      items3D.sort((a, b) => a.depth - b.depth);
+
+      lines.push(`% --- 3D Torus Projection ---`);
+      lines.push(`\\begin{tikzpicture}[scale=0.9]`);
+      wireLines.forEach(l => lines.push(l));
+      items3D.forEach(({ line }) => lines.push(line));
+      lines.push(`\\end{tikzpicture}`);
+    }
+
+    const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = is3D ? 'torus-graph-3d.tikz' : 'torus-graph-2d.tikz';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const clearGraph = () => {
     if (confirm("Clear entire graph?")) {
       saveToHistory();
@@ -645,6 +786,9 @@ function App() {
             </button>
             <button onClick={clearGraph} className="p-2 sm:p-3 bg-slate-900 hover:bg-red-900 rounded-xl border border-slate-700/50 shadow-lg transition-all active:scale-95" title="Clear">
               <Trash2 size={18} className="sm:w-5 sm:h-5" />
+            </button>
+            <button onClick={generateTikZ} className="p-2 sm:p-3 bg-slate-900 hover:bg-slate-800 rounded-xl border border-slate-700/50 shadow-lg transition-all active:scale-95" title="Export TikZ">
+              <Code2 size={18} className="sm:w-5 sm:h-5" />
             </button>
           </div>
         </div>

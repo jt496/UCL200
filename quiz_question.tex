@@ -7,6 +7,10 @@
 \usepackage{hyperref}
 
 \usepackage{tikz}
+%%%%%%%%%%%%%%%%%%  compile full/short version
+\newif\iffullversion 
+\fullversiontrue  % Leave this to compile the full version, comment out for short version
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \usetikzlibrary{shapes, positioning, arrows.meta}
 
 \title{The Four Colour Theorem}
@@ -18,7 +22,7 @@
 \maketitle
 
 \section*{Colouring Maps}
-The famous Four Colour Theorem has its roots at UCL. In 1852, \textbf{Francis Guthrie}, a mathematics student at the time, noticed that four colours seemed sufficient to colour any map so that no two adjacent regions shared the same colour. He shared this observation with his brother Frederick, who then brought it to the attention of their professor, Augustus De Morgan.
+In 1852, Francis Guthrie, a mathematics student at UCL, noticed that four colours seemed sufficient to colour any map so that no two adjacent regions shared the same colour. He shared this observation with his brother Frederick, who then brought it to the attention of their professor, Augustus De Morgan.
 
 This problem took another 124 years to solve and even today the only known proofs require a computer to verify parts of the argument.
 
@@ -115,14 +119,18 @@ This problem took another 124 years to solve and even today the only known proof
 \end{tikzpicture}
 \caption{A 4-coloured map and its 4-coloured dual graph}\label{dual}
 \end{figure}
-Rather than thinking about map colouring directly, we can look at the \emph{dual} problem (see Figure \ref{dual}). Each region in the map becomes a \emph{vertex} and  we draw an \emph{edge} between two vertices if their corresponding regions share a border. A colouring of the map is then equivalent to a ``vertex colouring'' of this dual graph, where no two adjacent vertices have the same colour.
+Rather than thinking about map colouring directly, we can look at the \emph{dual} problem (see Figure \ref{dual}). Each region in the map becomes a \emph{vertex} (a round node) and we draw an \emph{edge} (a straight line) between two vertices if their corresponding regions share a border. A colouring of the map is then equivalent to a colouring of the vertices of this dual graph, where no two adjacent vertices have the same colour.
 
 This dual object is called a \emph{planar graph}. The key property of a planar graph is that it can be drawn on a piece of paper so that no two edges cross (remember edges are the straight lines and vertices are the dots we colour).
 
 
 If we look again at the example in Figure \ref{dual} it isn't hard to see that we can actually colour it with three colours, as shown in Figure \ref{3col}. 
+
+One simple example of a graph that requires $t$ colours to colour it properly is the complete graph on $t$ vertices, $K_t$, where every vertex is connected to every other vertex. Since each vertex is connected to every other vertex, we need a different colour for each vertex. 
+
+
 \begin{question}[Warm-up]
-Can you find an example of a planar graph that requires four colours to colour it properly (no two adjacent vertices have the same colour)? 
+What is the largest complete graph $K_t$ that can be drawn properly in the plane? (i.e.~with no edges crossings)
 \end{question}
 \begin{figure}
 \begin{center}
@@ -137,7 +145,7 @@ Can you find an example of a planar graph that requires four colours to colour i
     \node[fill=green!40]  (V_KT) at (3.2, -1) {};
     \node[fill=blue!40] (V_HP) at (-3, -2.5) {};
     \node[fill=green!40]   (V_WS) at (-0.7, -3.5) {};
-    \node[fill=red!40] (V_ES) at (1.8, -3.5) {};
+    \node[fill=blue!40] (V_ES) at (1.8, -3.5) {};
     
     % Adjacencies (Edges) - Solid Lines
     \draw[thick] (V_GL) -- (V_EX); \draw[thick] (V_GL) -- (V_HT); \draw[thick] (V_GL) -- (V_BK);
@@ -157,6 +165,44 @@ Can you find an example of a planar graph that requires four colours to colour i
 \caption{A 3-colouring of the dual graph}\label{3col}
 \end{figure}
 
+\iffullversion
+\textbf{Solution:\\}
+We can certainly draw $K_4$ in the plane without any edges crossing, as shown in Figure \ref{K4}. However, if we try to draw $K_5$ we will find that no matter how we arrange the vertices and edges, at least one pair of edges will always cross. 
+
+One way to see this is to first think about how we can draw $K_3$ in the plane. Clearly this must form a triangle. Now if we want to add a fourth vertex to create $K_4$, we can place it either inside or outside this triangle. However in both cases our drawing of $K_4$ will consist of a triangle with a single central vertex inside it, and  the edges split the  large triangle into three smaller triangles (so it looks something like Figure \ref{K4}).
+
+How can we now add a fifth vertex? If we place it inside any of the smaller triangles then there is always one vertex that we cannot connect it to without crossing an edge. If we place it outside the large triangle then we can't connect it to the central vertex without crossing an edge. So we can't draw $K_5$ in the plane without edges crossing.
+\begin{figure}[h]
+\begin{center}
+\begin{tikzpicture}[scale=1.2]
+    % Define the four vertices - three forming a triangle, one in the center
+    \coordinate (A) at (0,2);
+    \coordinate (B) at (-1.5,-1);
+    \coordinate (C) at (1.5,-1);
+    \coordinate (D) at (0,0.2);
+    
+    % Draw all edges (complete graph K_4) - planar embedding
+    \draw[thick] (A) -- (B);
+    \draw[thick] (B) -- (C);
+    \draw[thick] (C) -- (A);
+    \draw[thick] (A) -- (D);
+    \draw[thick] (B) -- (D);
+    \draw[thick] (C) -- (D);
+    
+    % Draw vertices with 4 different colors
+    \filldraw[fill=red!40, draw=black] (A) circle (0.2cm);
+    \filldraw[fill=blue!40, draw=black] (B) circle (0.2cm);
+    \filldraw[fill=green!40, draw=black] (C) circle (0.2cm);
+    \filldraw[fill=yellow!40, draw=black] (D) circle (0.2cm);
+\end{tikzpicture}
+\end{center}
+\caption{A 4-colouring of $K_4$ drawn in the plane}\label{K4}
+\end{figure}
+
+\fi
+
+\section*{Colouring Graphs on a Torus}
+
 \begin{figure}[h]
 \begin{center}
 \begin{tikzpicture}[scale=0.8]
@@ -174,105 +220,130 @@ Can you find an example of a planar graph that requires four colours to colour i
 \end{center}\caption{A doughnut (otherwise known as a torus)}\label{torus}
 \end{figure}
 
-It turns out that the question of how many colours are needed to colour graphs drawn on a doughnut (or \emph{torus} as mathematicians call it) is easier to answer than the planar case. To start with let us try to find the largest \emph{clique} that can be drawn on a torus. (A \emph{clique} is a graph in which every vertex is connected to every other vertex.)
+% The question of how many colours are needed to colour a graph drawn on a doughnut (or \emph{torus} as mathematicians call it) is easier to answer than the planar case, but it still needs some rather fancy mathematics. 
+
+% To start with let us try to find the largest complete graph $K_t$ that can be drawn properly on a torus (i.e.~with no edges crossings).
+
+What if rather than colouring graphs drawn in the plane we want to colour graphs drawn on a doughnut (or \emph{torus} as mathematicians call it)?
 \begin{question}
-What is the largest clique that can be drawn on a torus?
+What is the largest complete graph $K_t$ that can be drawn properly on a torus? (i.e.~with no edges crossings)
 \end{question}
-Drawing a graph on a torus can be hard to visualize, but there is a nice trick we can use to help us. We can draw the graph on a piece of paper and then roll it up into a cylinder, identifying the left and right edges. Then we can can roll the cylinder up into a torus, identifying the top and bottom circles of the cylinder. (In practice doing this by hand with a piece of paper is not easy, so here is an online tool to help you explore this problem \url{https://www.homepages.ucl.ac.uk/~ucahjmt/doughnut/} and find the answer.)
+Drawing a graph on a torus can be hard to visualize, but there is a nice trick we can use to help: we can draw the graph on a piece of paper and then roll it up into a cylinder, sticking the left and right edges together. We can can roll the cylinder up into a torus, sticking the top and bottom circles of the cylinder together. (In practice doing this by hand with a piece of paper is not easy, so here is an online tool to help we explore this problem \url{https://www.homepages.ucl.ac.uk/~ucahjmt/doughnut/} and find the answer.)
 
 
+\iffullversion
+\textbf{Solution:\\}
+The largest complete graph that can be drawn properly on a torus is $K_7$. See Figures \ref{K7} and \ref{K7:3d} for 2D and 3D drawings.
 
-\section*{Why does 7 suffice?}
-The key idea is the following: if every graph that can be drawn on a torus contains a vertex that belongs to at most 6 edges then we can colour the graph with 7 colours "by induction". [More formally: we can easily colour any graph with at most 7 vertices using 7 colours -- simply give each vertex a different colour. Now suppose we have a graph with $n>7$ vertices. If we can find a vertex $v$ that belongs to at most 6 edges, we can remove it from the graph, colour the remaining $n-1$ vertices with 7 colours (by our inductive hypothesis), and then colour $v$ with one of the colours that is not used by any of its neighbours (since $v$ has at most 6 neighbour there is always a colour available).]
 
-So how do we show that any graph that can be drawn on the torus contains a vertex that belongs to at most 6 edges?
+\begin{figure}[h]
+    \begin{center}
+\input{2.tikz}
+            \end{center}
+\caption{A drawing of $K_7$ on a torus (2D-version)}\label{K7}
+        \end{figure}
 
-There is a magical formula (called the Euler characteristic) that tells us how the number of vertices ($V$), edges ($E$), and faces ($F$) of a graph drawn on a surface are related. 
 
-For a torus the formula says that: 
-\[
-V =  E - F.\]
-Now any face of a graph contains at least 3 edges, and each edge belongs to exactly 2 faces so this tells us that $2E \ge 3F$, so 
-\[
-6V = 6E - 6F \le 6E - 4E = 2E.
-\]
-This tells us that the average number of edges a verex belongs to is 6, which means that there must be at least one vertex that belongs to at most 6 edges!
+\begin{figure}[h!]
+    \begin{center}
+\input{3.tikz}
+            \end{center}
+\caption{A drawing of $K_7$ on a torus (3D-version)}\label{K7:3d}
+        \end{figure}
+
+To see why $K_8$ cannot be drawn on a torus without edges crossing, we can use the following argument. If we could draw $K_8$ on a torus without edges crossing, then we would have a graph with 8 vertices and 28 edges (since $K_8$ has $\frac{8 \cdot 7}{2} = 28$ edges). However, using Euler's formula for a torus ($V - E + F = 0$) we can derive the inequality $E \le 3V$, which tells us that any graph drawn on a torus can have at most $3 \cdot 8 = 24$ edges. Since $K_8$ has more than 24 edges, it cannot be drawn on a torus without edges crossing.
+
+% \section*{Why does 7 suffice?}
+% The key idea is the following: if every graph that can be drawn on a torus contains a vertex that belongs to at most 6 edges then we can colour the graph with 7 colours "by induction". [More formally: we can easily colour any graph with at most 7 vertices using 7 colours -- simply give each vertex a different colour. Now suppose we have a graph with $n>7$ vertices. If we can find a vertex $v$ that belongs to at most 6 edges, we can remove it from the graph, colour the remaining $n-1$ vertices with 7 colours (by our inductive hypothesis), and then colour $v$ with one of the colours that is not used by any of its neighbours (since $v$ has at most 6 neighbour there is always a colour available).]
+
+% So how do we show that any graph that can be drawn on the torus contains a vertex that belongs to at most 6 edges?
+
+% There is a magical formula (called the Euler characteristic) that tells us how the number of vertices ($V$), edges ($E$), and faces ($F$) of a graph drawn on a surface are related. For a torus the formula says that: 
+% \begin{equation}\label{EC:eq}
+% V =  E - F.
+% \end{equation}
+% Any face of a graph contains at least 3 edges, and each edge belongs to exactly 2 faces so this tells us that $2E \ge 3F$, so using (\ref{EC:eq}) we have 
+% \[
+% 6V = 6E - 6F \le 6E - 4E = 2E.
+% \]
+% This tells us that the average number of edges a vertex belongs to is 6, which means that there must be at least one vertex that belongs to at most 6 edges!
+\fi
 \end{document}
 
-\subsection*{Colouring Complete Graphs and Cycles}
-The minimum number of colours needed to colour a graph is called its \textbf{chromatic number}, denoted $\chi(G)$.
+% \subsection*{Colouring Complete Graphs and Cycles}
+% The minimum number of colours needed to colour a graph is called its \textbf{chromatic number}, denoted $\chi(G)$.
 
-As a warm-up question can you work out how many colours we need to colour the following graphs?
-
-
-\begin{enumerate}
-    \item \textbf{Complete Graphs ($K_n$)}: Since every vertex is connected to every other vertex, every vertex must have a unique colour. Thus, $\chi(K_n) = n$.
-\end{enumerate}
-
-\begin{center}
-\begin{tikzpicture}[scale=1.2, every node/.style={circle, draw, minimum size=0.8cm, font=\bfseries}]
-    \node[fill=red!30] (A) at (90:1.2) {1};
-    \node[fill=green!30] (B) at (210:1.2) {2};
-    \node[fill=blue!30] (C) at (330:1.2) {3};
-    \draw[thick] (A) -- (B) -- (C) -- (A);
-    \node[draw=none, fill=none] at (0,-1.5) {$\chi(K_3) = 3$};
-\end{tikzpicture}
-\end{center}
-
-\begin{enumerate}
-    \setcounter{enumi}{1}
-    \item \textbf{Cycles ($C_n$)}: A cycle consists of vertices connected in a single loop. 
-    \begin{itemize}
-        \item If $n$ is even, we can alternate between 2 colours: $\chi(C_{\text{even}}) = 2$.
-        \item If $n$ is odd, the last vertex will always conflict with the first if we only have 2 colours: $\chi(C_{\text{odd}}) = 3$.
-    \end{itemize}
-\end{enumerate}
-
-\begin{center}
-\begin{tikzpicture}[scale=1.2, every node/.style={circle, draw, minimum size=0.8cm, font=\bfseries}]
-    \node[fill=red!30] (1) at (90:1.2) {1};
-    \node[fill=green!30] (2) at (18:1.2) {2};
-    \node[fill=red!30] (3) at (306:1.2) {1};
-    \node[fill=green!30] (4) at (234:1.2) {2};
-    \node[fill=blue!30] (5) at (162:1.2) {3};
-    \draw[thick] (1) -- (2) -- (3) -- (4) -- (5) -- (1);
-    \node[draw=none, fill=none] at (0,-1.8) {$\chi(C_5) = 3$};
-\end{tikzpicture}
-\end{center}
+% As a warm-up question can we work out how many colours we need to colour the following graphs?
 
 
-\section*{Question 1: Planarity and Complete Graphs}
-A complete graph $K_n$ is a graph where every vertex is connected to every other vertex by a unique edge.
+% \begin{enumerate}
+%     \item \textbf{Complete Graphs ($K_n$)}: Since every vertex is connected to every other vertex, every vertex must have a unique colour. Thus, $\chi(K_n) = n$.
+% \end{enumerate}
 
-\begin{enumerate}
-    \item Show that for any simple planar graph, $E \le 3V - 6$. (Hint: Every face must have at least 3 edges).
-    \item Use this inequality to prove that $K_5$ is not planar, but $K_4$ is.
-    \item Below is an illustration of $K_4$ drawn without any edges crossing.
-\end{enumerate}
+% \begin{center}
+% \begin{tikzpicture}[scale=1.2, every node/.style={circle, draw, minimum size=0.8cm, font=\bfseries}]
+%     \node[fill=red!30] (A) at (90:1.2) {1};
+%     \node[fill=green!30] (B) at (210:1.2) {2};
+%     \node[fill=blue!30] (C) at (330:1.2) {3};
+%     \draw[thick] (A) -- (B) -- (C) -- (A);
+%     \node[draw=none, fill=none] at (0,-1.5) {$\chi(K_3) = 3$};
+% \end{tikzpicture}
+% \end{center}
 
-\begin{center}
-\begin{tikzpicture}[scale=1.5, every node/.style={circle, fill=blue!20, draw, minimum size=0.8cm, font=\bfseries}]
-    % Define vertices of K4
-    \node (A) at (0, 0) {1};
-    \node (B) at (2, 0) {2};
-    \node (C) at (1, 1.732) {3};
-    \node (D) at (1, 0.6) {4};
+% \begin{enumerate}
+%     \setcounter{enumi}{1}
+%     \item \textbf{Cycles ($C_n$)}: A cycle consists of vertices connected in a single loop. 
+%     \begin{itemize}
+%         \item If $n$ is even, we can alternate between 2 colours: $\chi(C_{\text{even}}) = 2$.
+%         \item If $n$ is odd, the last vertex will always conflict with the first if we only have 2 colours: $\chi(C_{\text{odd}}) = 3$.
+%     \end{itemize}
+% \end{enumerate}
 
-    % Draw edges for planar K4
-    \draw[thick] (A) -- (B);
-    \draw[thick] (B) -- (C);
-    \draw[thick] (C) -- (A);
-    \draw[thick] (A) -- (D);
-    \draw[thick] (B) -- (D);
-    \draw[thick] (C) -- (D);
-\end{tikzpicture}
-\end{center}
+% \begin{center}
+% \begin{tikzpicture}[scale=1.2, every node/.style={circle, draw, minimum size=0.8cm, font=\bfseries}]
+%     \node[fill=red!30] (1) at (90:1.2) {1};
+%     \node[fill=green!30] (2) at (18:1.2) {2};
+%     \node[fill=red!30] (3) at (306:1.2) {1};
+%     \node[fill=green!30] (4) at (234:1.2) {2};
+%     \node[fill=blue!30] (5) at (162:1.2) {3};
+%     \draw[thick] (1) -- (2) -- (3) -- (4) -- (5) -- (1);
+%     \node[draw=none, fill=none] at (0,-1.8) {$\chi(C_5) = 3$};
+% \end{tikzpicture}
+% \end{center}
 
-\section*{Question 2: Graphs on a Torus}
-Now imagine we are drawing our graph on a torus (a surface with one hole).
 
-\begin{enumerate}
-    \item Using Euler's formula for a torus ($V - E + F = 0$), derive the equivalent inequality for the number of edges: $E \le 3V$.
-    \item A complete graph $K_n$ has $E = \frac{n(n-1)}{2}$ edges. Calculate the maximum value of $n$ such that $K_n$ can be embedded on a torus without any edges crossing.
-    \item Why does this imply that while maps on a plane require 4 colours, maps on a torus can require up to 7?
-\end{enumerate}
+% \section*{Question 1: Planarity and Complete Graphs}
+% A complete graph $K_n$ is a graph where every vertex is connected to every other vertex by a unique edge.
+
+% \begin{enumerate}
+%     \item Show that for any simple planar graph, $E \le 3V - 6$. (Hint: Every face must have at least 3 edges).
+%     \item Use this inequality to prove that $K_5$ is not planar, but $K_4$ is.
+%     \item Below is an illustration of $K_4$ drawn without any edges crossing.
+% \end{enumerate}
+
+% \begin{center}
+% \begin{tikzpicture}[scale=1.5, every node/.style={circle, fill=blue!20, draw, minimum size=0.8cm, font=\bfseries}]
+%     % Define vertices of K4
+%     \node (A) at (0, 0) {1};
+%     \node (B) at (2, 0) {2};
+%     \node (C) at (1, 1.732) {3};
+%     \node (D) at (1, 0.6) {4};
+
+%     % Draw edges for planar K4
+%     \draw[thick] (A) -- (B);
+%     \draw[thick] (B) -- (C);
+%     \draw[thick] (C) -- (A);
+%     \draw[thick] (A) -- (D);
+%     \draw[thick] (B) -- (D);
+%     \draw[thick] (C) -- (D);
+% \end{tikzpicture}
+% \end{center}
+
+% \section*{Question 2: Graphs on a Torus}
+% Now imagine we are drawing our graph on a torus (a surface with one hole).
+
+% \begin{enumerate}
+%     \item Using Euler's formula for a torus ($V - E + F = 0$), derive the equivalent inequality for the number of edges: $E \le 3V$.
+%     \item A complete graph $K_n$ has $E = \frac{n(n-1)}{2}$ edges. Calculate the maximum value of $n$ such that $K_n$ can be embedded on a torus without any edges crossing.
+%     \item Why does this imply that while maps on a plane require 4 colours, maps on a torus can require up to 7?
+% \end{enumerate}
