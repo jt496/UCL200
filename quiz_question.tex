@@ -203,7 +203,7 @@ How can we now add a fifth vertex? If we place it inside any of the smaller tria
 
 \section*{Colouring Graphs on a Torus}
 
-\begin{figure}[h]
+\begin{figure}[!h]
 \begin{center}
 \begin{tikzpicture}[scale=0.8]
     % Torus schematic (isometric view)
@@ -224,11 +224,11 @@ How can we now add a fifth vertex? If we place it inside any of the smaller tria
 
 % To start with let us try to find the largest complete graph $K_t$ that can be drawn properly on a torus (i.e.~with no edges crossings).
 
-What if rather than colouring graphs drawn in the plane we want to colour graphs drawn on a doughnut (or \emph{torus} as mathematicians call it)?
+What if rather than colouring graphs drawn in the plane we want to colour graphs drawn on a doughnut or \emph{torus} as mathematicians call it? (See Figure \ref{torus}.)
 \begin{question}
 What is the largest complete graph $K_t$ that can be drawn properly on a torus? (i.e.~with no edges crossings)
 \end{question}
-Drawing a graph on a torus can be hard to visualize, but there is a nice trick we can use to help: we can draw the graph on a piece of paper and then roll it up into a cylinder, sticking the left and right edges together. We can can roll the cylinder up into a torus, sticking the top and bottom circles of the cylinder together. (In practice doing this by hand with a piece of paper is not easy, so here is an online tool to help we explore this problem \url{https://www.homepages.ucl.ac.uk/~ucahjmt/doughnut/} and find the answer.)
+Drawing a graph on a torus can be hard to visualize, but there is a nice trick we can use to help: we can draw the graph on a piece of paper and then roll it up into a cylinder, sticking the left and right edges together. We can can roll the cylinder up into a torus, sticking the top and bottom circles of the cylinder together. (In practice doing this by hand with a piece of paper is not easy, so here is an online tool to help you explore this problem \url{https://www.homepages.ucl.ac.uk/~ucahjmt/doughnut/} and find the answer.)
 
 
 \iffullversion
@@ -251,7 +251,18 @@ The largest complete graph that can be drawn properly on a torus is $K_7$. See F
 \caption{A drawing of $K_7$ on a torus (3D-version)}\label{K7:3d}
         \end{figure}
 
-To see why $K_8$ cannot be drawn on a torus without edges crossing, we can use the following argument. If we could draw $K_8$ on a torus without edges crossing, then we would have a graph with 8 vertices and 28 edges (since $K_8$ has $\frac{8 \cdot 7}{2} = 28$ edges). However, using Euler's formula for a torus ($V - E + F = 0$) we can derive the inequality $E \le 3V$, which tells us that any graph drawn on a torus can have at most $3 \cdot 8 = 24$ edges. Since $K_8$ has more than 24 edges, it cannot be drawn on a torus without edges crossing.
+To see why $K_8$ cannot be drawn on a torus without edges crossing, we need to use a magical formula (called the Euler characteristic) that tells us how the number of vertices ($V$), edges ($E$), and faces ($F$) of a graph drawn on a surface are related. For a torus the formula says that: 
+\begin{equation}\label{EC:eq}
+V- E+ F \ge 0.
+\end{equation}
+We also need to use the fact that if a graph has at least 3 vertices and no loops or multiple edges then $3F \le 2E$. (This is essentially because every face of a graph contains at least 3 edges, and each edge belongs to exactly 2 faces.)
+
+Putting these two facts together we can check whether $K_8$ can be drawn on a torus without edges crossing. Since $K_8$ has 8 vertices and 28 edges, if we could draw it on a torus without edges crossing then we would have $V=8$ and $E=28$. Using the inequality $3F \le 2E$ we have $F \le \frac{2E}{3} = \frac{2 \cdot 28}{3} = \frac{56}{3}$. Putting this into the Euler characteristic formula we have $V - E + F \le 8 - 28 + \frac{56}{3} = \frac{8}{3} < 0$, which is a contradiction. So $K_8$ cannot be drawn on a torus without edges crossing.
+
+
+
+
+% we can use the following argument. If we could draw $K_8$ on a torus without edges crossing, then we would have a graph with 8 vertices and 28 edges (since $K_8$ has $\frac{8 \cdot 7}{2} = 28$ edges). However, using Euler's formula for a torus ($V - E + F = 0$) we can derive the inequality $E \le 3V$, which tells us that any graph drawn on a torus can have at most $3 \cdot 8 = 24$ edges. Since $K_8$ has more than 24 edges, it cannot be drawn on a torus without edges crossing.
 
 % \section*{Why does 7 suffice?}
 % The key idea is the following: if every graph that can be drawn on a torus contains a vertex that belongs to at most 6 edges then we can colour the graph with 7 colours "by induction". [More formally: we can easily colour any graph with at most 7 vertices using 7 colours -- simply give each vertex a different colour. Now suppose we have a graph with $n>7$ vertices. If we can find a vertex $v$ that belongs to at most 6 edges, we can remove it from the graph, colour the remaining $n-1$ vertices with 7 colours (by our inductive hypothesis), and then colour $v$ with one of the colours that is not used by any of its neighbours (since $v$ has at most 6 neighbour there is always a colour available).]
