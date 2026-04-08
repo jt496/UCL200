@@ -1,10 +1,13 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import type { Vertex, Edge } from '../App';
 import {
-  getPolygonVerts, firstCrossing, wrapPos, wrapDir, tracePath,
-  edgeColor, edgeLabel, insidePolygon,
+  getPolygonVerts, getHyperbolicPolygonVerts, getDeckTransforms,
+  firstCrossing, wrapPos, wrapDir, tracePath, snapDisplacementTo,
+  hypTracePath, hypSnapTo, hypGeodesicCrossing, hypGetEdgeSegs, mobiusApply,
+  geodesicArcParams,
+  edgeColor, insidePolygon, isHyperbolic,
   add, sub, scale, norm, len, dot,
-  type Vec2,
+  type Vec2, type MobiusDisc, type GeodesicArcParams,
 } from '../geometry';
 
 interface PolygonCanvasProps {
@@ -13,7 +16,7 @@ interface PolygonCanvasProps {
   genus: number;
   currentTool: 'vertex' | 'edge' | 'eraser';
   onAddVertex: (x: number, y: number) => void;
-  onAddEdge: (fromId: string, toId: string, vx: number, vy: number) => void;
+  onAddEdge: (fromId: string, toId: string, tx: number, ty: number) => void;
   onRemoveVertex: (id: string) => void;
   onRemoveEdge: (id: string) => void;
   onMoveVertex: (id: string, dx: number, dy: number) => void;
@@ -24,19 +27,18 @@ interface PolygonCanvasProps {
   maxClique: Set<string>;
 }
 
-// Draw an edge path with wrapping, collecting moveTo/lineTo segments
+// ---- Flat torus (g=1) drawing helpers ----
+
 function drawEdgePath(
   ctx: CanvasRenderingContext2D,
-  fromX: number,
-  fromY: number,
-  vx: number,
-  vy: number,
-  g: number,
-  verts: Vec2[],
+  fromX: number, fromY: number,
+  tx: number, ty: number,
+  g: number, verts: Vec2[],
   toScreen: (p: Vec2) => { x: number; y: number }
 ) {
+  // tx,ty is absolute endpoint; displacement = (tx-fromX, ty-fromY)
   let pos: Vec2 = { x: fromX, y: fromY };
-  let rem: Vec2 = { x: vx, y: vy };
+  let rem: Vec2 = { x: tx - fromX, y: ty - fromY };
   ctx.beginPath();
   const s0 = toScreen(pos);
   ctx.moveTo(s0.x, s0.y);
@@ -60,14 +62,13 @@ function drawEdgePath(
   ctx.stroke();
 }
 
-// Collect segment endpoints for edge path (for hit testing)
-function getEdgeSegments(
-  fromX: number, fromY: number, vx: number, vy: number,
+function getEdgeSegmentsFlat(
+  fromX: number, fromY: number, tx: number, ty: number,
   g: number, verts: Vec2[]
 ): Array<[Vec2, Vec2]> {
   const segs: Array<[Vec2, Vec2]> = [];
   let pos: Vec2 = { x: fromX, y: fromY };
-  let rem: Vec2 = { x: vx, y: vy };
+  let rem: Vec2 = { x: tx - fromX, y: ty - fromY };
   for (let iter = 0; iter < 6; iter++) {
     const cross = firstCrossing(pos, rem, verts);
     if (!cross) {
@@ -84,6 +85,91 @@ function getEdgeSegments(
   return segs;
 }
 
+// ---- Hyperbolic (g>=2) drawing helpers ----
+
+// Draw a geodesic arc in screen space, continuing the current canvas path.
+// Assumes ctx.moveTo was already called or path is in progress.
+function drawGeodesicSegment(
+  ctx: CanvasRenderingContext2D,
+  arc: GeodesicArcParams,
+  toScreen: (p: Vec2) => { x: number; y: number },
+  sc: number
+) {
+  if (arc.isLine) {
+    const s2 = toScreen(arc.z2);
+    ctx.lineTo(s2.x, s2.y);
+  } else {
+    const { cx, cy, r, z1, z2 } = arc;
+    const scx = toScreen({ x: cx, y: cy }).x;
+    const scy = toScreen({ x: cx, y: cy }).y;
+    const sr = r * sc;
+
+    const s1 = toScreen(z1);
+    const s2 = toScreen(z2);
+
+    const a1 = Math.atan2(s1.y - scy, s1.x - scx);
+    const a2 = Math.atan2(s2.y - scy, s2.x - scx);
+
+    // Determine which arc direction (CCW in screen = CW in math due to y-flip)
+    // stays inside the disc. Test the midpoint of the CCW screen arc.
+    const normAng = (a: number) => ((a % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+    const aMidCCW = a1 + normAng(a2 - a1) / 2;
+    const midSx = scx + sr * Math.cos(aMidCCW);
+    const midSy = scy + sr * Math.sin(aMidCCW);
+    // Convert mid back to math coords
+    const midMathX = (midSx - toScreen({ x: 0, y: 0 }).x) / sc;
+    const midMathY = -(midSy - toScreen({ x: 0, y: 0 }).y) / sc;
+    const midInsideDisc = midMathX * midMathX + midMathY * midMathY < 1;
+
+    // If CCW arc in screen is inside disc, draw CCW (anticlockwise=false in canvas)
+    // Otherwise draw CW (anticlockwise=true)
+    ctx.arc(scx, scy, Math.max(sr, 0.1), a1, a2, !midInsideDisc);
+  }
+}
+
+// Draw a hyperbolic edge path (geodesic arcs with Möbius wrapping)
+function drawHypEdgePath(
+  ctx: CanvasRenderingContext2D,
+  fromPos: Vec2, target: Vec2,
+  verts: Vec2[], decks: MobiusDisc[],
+  toScreen: (p: Vec2) => { x: number; y: number },
+  sc: number
+) {
+  const n = verts.length;
+  let curPos = fromPos;
+  let curTarget = target;
+
+  ctx.beginPath();
+  const s0 = toScreen(curPos);
+  ctx.moveTo(s0.x, s0.y);
+
+  for (let iter = 0; iter < 8; iter++) {
+    let best: { t: number; point: Vec2; edgeIndex: number } | null = null;
+    for (let i = 0; i < n; i++) {
+      const cross = hypGeodesicCrossing(curPos, curTarget, verts[i], verts[(i + 1) % n]);
+      if (cross && (best === null || cross.t < best.t)) {
+        best = { t: cross.t, point: cross.point, edgeIndex: i };
+      }
+    }
+    if (!best) {
+      const arc = geodesicArcParams(curPos, curTarget);
+      drawGeodesicSegment(ctx, arc, toScreen, sc);
+      break;
+    }
+    // Draw arc from curPos to crossing point
+    const arc = geodesicArcParams(curPos, best.point);
+    drawGeodesicSegment(ctx, arc, toScreen, sc);
+    // Wrap
+    const d = decks[best.edgeIndex];
+    curPos = mobiusApply(d, best.point);
+    curTarget = mobiusApply(d, curTarget);
+    const sp = toScreen(curPos);
+    ctx.moveTo(sp.x, sp.y);
+  }
+  ctx.stroke();
+}
+
+// ---- Point-to-segment distance ----
 function pointToSegDist(p: Vec2, a: Vec2, b: Vec2): number {
   const ab = sub(b, a);
   const l2 = ab.x * ab.x + ab.y * ab.y;
@@ -104,7 +190,7 @@ export const PolygonCanvas: React.FC<PolygonCanvasProps> = ({
     fromId: string;
     fromX: number;
     fromY: number;
-    vx: number;
+    vx: number; // accumulated Euclidean displacement in math coords
     vy: number;
     isDragging: boolean;
   } | null>(null);
@@ -115,7 +201,6 @@ export const PolygonCanvas: React.FC<PolygonCanvasProps> = ({
   const lastMousePos = useRef<{ x: number; y: number } | null>(null);
   const lastTouchPos = useRef<{ x: number; y: number } | null>(null);
 
-  // Refs for values needed in closures without re-registering listeners
   const verticesRef = useRef(vertices);
   const edgesRef = useRef(edges);
   const genusRef = useRef(genus);
@@ -152,6 +237,18 @@ export const PolygonCanvas: React.FC<PolygonCanvasProps> = ({
     return t.toMath(clientX - rect.left, clientY - rect.top);
   }, [getTransforms]);
 
+  // Compute the actual endpoint from drag state for a given genus
+  const getDragActualEnd = useCallback((drag: { fromX: number; fromY: number; vx: number; vy: number }, g: number): Vec2 => {
+    const verts = getPolygonVerts(g);
+    if (isHyperbolic(g)) {
+      const decks = getDeckTransforms(verts);
+      const approxTarget: Vec2 = { x: drag.fromX + drag.vx, y: drag.fromY + drag.vy };
+      return hypTracePath({ x: drag.fromX, y: drag.fromY }, approxTarget, verts, decks);
+    } else {
+      return tracePath({ x: drag.fromX, y: drag.fromY }, { x: drag.vx, y: drag.vy }, g, verts);
+    }
+  }, []);
+
   const handleStart = useCallback((clientX: number, clientY: number, isTouch: boolean = false) => {
     const coords = getCanvasCoords(clientX, clientY);
     if (!coords) return;
@@ -168,12 +265,26 @@ export const PolygonCanvas: React.FC<PolygonCanvasProps> = ({
       if (clicked) { onRemoveVertex(clicked.id); return; }
 
       const eList = edgesRef.current;
-      const clickedEdge = eList.find(edge => {
-        const from = vList.find(v => v.id === edge.fromId);
-        if (!from) return false;
-        const segs = getEdgeSegments(from.x, from.y, edge.vx, edge.vy, g, verts);
-        return segs.some(([a, b]) => pointToSegDist(coords, a, b) < 0.04);
-      });
+      let clickedEdge: Edge | undefined;
+      if (isHyperbolic(g)) {
+        const hypVerts = getHyperbolicPolygonVerts(g);
+        const decks = getDeckTransforms(hypVerts);
+        clickedEdge = eList.find(edge => {
+          const from = vList.find(v => v.id === edge.fromId);
+          if (!from) return false;
+          const segs = hypGetEdgeSegs(
+            { x: from.x, y: from.y }, { x: edge.tx, y: edge.ty }, hypVerts, decks
+          );
+          return segs.some(([a, b]: [Vec2, Vec2]) => pointToSegDist(coords, a, b) < 0.04);
+        });
+      } else {
+        clickedEdge = eList.find(edge => {
+          const from = vList.find(v => v.id === edge.fromId);
+          if (!from) return false;
+          const segs = getEdgeSegmentsFlat(from.x, from.y, edge.tx, edge.ty, g, verts);
+          return segs.some(([a, b]) => pointToSegDist(coords, a, b) < 0.04);
+        });
+      }
       if (clickedEdge) { onRemoveEdge(clickedEdge.id); }
       return;
     }
@@ -186,15 +297,31 @@ export const PolygonCanvas: React.FC<PolygonCanvasProps> = ({
 
       if (clickedVertex) {
         if (drag) {
-          // Finish edge: trace to actual endpoint and check if clickedVertex is nearby
-          const actualEnd = tracePath({ x: drag.fromX, y: drag.fromY }, { x: drag.vx, y: drag.vy }, g, verts);
+          const actualEnd = getDragActualEnd(drag, g);
           const dist = Math.sqrt((clickedVertex.x - actualEnd.x) ** 2 + (clickedVertex.y - actualEnd.y) ** 2);
           if (dist < radius * 2 &&
               (clickedVertex.id !== drag.fromId || Math.sqrt(drag.vx ** 2 + drag.vy ** 2) > 0.1)) {
-            onAddEdge(drag.fromId, clickedVertex.id, drag.vx, drag.vy);
+            // Finalize edge
+            if (isHyperbolic(g)) {
+              const hypVerts = getHyperbolicPolygonVerts(g);
+              const decks = getDeckTransforms(hypVerts);
+              const approxTarget: Vec2 = { x: drag.fromX + drag.vx, y: drag.fromY + drag.vy };
+              const snapped = hypSnapTo(
+                { x: drag.fromX, y: drag.fromY }, approxTarget,
+                { x: clickedVertex.x, y: clickedVertex.y },
+                hypVerts, decks
+              );
+              onAddEdge(drag.fromId, clickedVertex.id, snapped.x, snapped.y);
+            } else {
+              const snapped = snapDisplacementTo(
+                drag.fromX, drag.fromY, drag.vx, drag.vy,
+                clickedVertex.x, clickedVertex.y, g, verts
+              );
+              // For g=1: tx = fromX + snapped.x, ty = fromY + snapped.y
+              onAddEdge(drag.fromId, clickedVertex.id, drag.fromX + snapped.x, drag.fromY + snapped.y);
+            }
             setActiveDrag(null);
           } else {
-            // Start new drag from this vertex
             setActiveDrag({
               fromId: clickedVertex.id,
               fromX: clickedVertex.x,
@@ -213,7 +340,6 @@ export const PolygonCanvas: React.FC<PolygonCanvasProps> = ({
           });
         }
       } else {
-        // Cancel
         setActiveDrag(null);
       }
       return;
@@ -227,13 +353,12 @@ export const PolygonCanvas: React.FC<PolygonCanvasProps> = ({
         onStartMove();
         setVertexDragId(clickedVertex.id);
       } else {
-        // Only add if inside polygon
         if (insidePolygon(coords, verts)) {
           onAddVertex(coords.x, coords.y);
         }
       }
     }
-  }, [getCanvasCoords, onAddVertex, onAddEdge, onRemoveVertex, onRemoveEdge, onStartMove]);
+  }, [getCanvasCoords, onAddVertex, onAddEdge, onRemoveVertex, onRemoveEdge, onStartMove, getDragActualEnd]);
 
   const handleMove = useCallback((movePxX: number, movePxY: number) => {
     const t = getTransforms();
@@ -254,7 +379,6 @@ export const PolygonCanvas: React.FC<PolygonCanvasProps> = ({
       }
     }
 
-    // Check pointer outside polygon
     const canvas = canvasRef.current;
     if (canvas && lastMousePos.current) {
       const rect = canvas.getBoundingClientRect();
@@ -279,24 +403,37 @@ export const PolygonCanvas: React.FC<PolygonCanvasProps> = ({
     }
     if (drag && drag.isDragging) {
       const g = genusRef.current;
-      const verts = getPolygonVerts(g);
       const vList = verticesRef.current;
-      // Check if endpoint snaps to a vertex
-      const actualEnd = tracePath(
-        { x: drag.fromX, y: drag.fromY },
-        { x: drag.vx, y: drag.vy },
-        g, verts
-      );
       const snapRadius = 0.06;
+
+      const actualEnd = getDragActualEnd(drag, g);
       const targetV = vList.find(v =>
         Math.sqrt((v.x - actualEnd.x) ** 2 + (v.y - actualEnd.y) ** 2) < snapRadius
       );
+
       if (targetV && (targetV.id !== drag.fromId || Math.sqrt(drag.vx ** 2 + drag.vy ** 2) > 0.1)) {
-        onAddEdge(drag.fromId, targetV.id, drag.vx, drag.vy);
+        if (isHyperbolic(g)) {
+          const hypVerts = getHyperbolicPolygonVerts(g);
+          const decks = getDeckTransforms(hypVerts);
+          const approxTarget: Vec2 = { x: drag.fromX + drag.vx, y: drag.fromY + drag.vy };
+          const snapped = hypSnapTo(
+            { x: drag.fromX, y: drag.fromY }, approxTarget,
+            { x: targetV.x, y: targetV.y },
+            hypVerts, decks
+          );
+          onAddEdge(drag.fromId, targetV.id, snapped.x, snapped.y);
+        } else {
+          const verts = getPolygonVerts(g);
+          const snapped = snapDisplacementTo(
+            drag.fromX, drag.fromY, drag.vx, drag.vy,
+            targetV.x, targetV.y, g, verts
+          );
+          onAddEdge(drag.fromId, targetV.id, drag.fromX + snapped.x, drag.fromY + snapped.y);
+        }
       }
       setActiveDrag(null);
     }
-  }, [onEndMove, onAddEdge]);
+  }, [onEndMove, onAddEdge, getDragActualEnd]);
 
   // Global mouse/touch events
   useEffect(() => {
@@ -343,14 +480,29 @@ export const PolygonCanvas: React.FC<PolygonCanvasProps> = ({
       const toScreen = (p: Vec2) => ({ x: cx + p.x * sc, y: cy - p.y * sc });
 
       const g = genus;
+      const hyp = isHyperbolic(g);
       const verts = getPolygonVerts(g);
+      const hypVerts = hyp ? getHyperbolicPolygonVerts(g) : verts;
+      const decks = hyp ? getDeckTransforms(hypVerts) : [];
       const n = verts.length;
 
       // Background
       ctx.fillStyle = '#000000';
       ctx.fillRect(0, 0, w, h);
 
-      // Build polygon path
+      // For hyperbolic: draw unit disc boundary
+      if (hyp) {
+        const discCenter = toScreen({ x: 0, y: 0 });
+        ctx.beginPath();
+        ctx.arc(discCenter.x, discCenter.y, sc, 0, 2 * Math.PI);
+        ctx.fillStyle = '#0a0a12';
+        ctx.fill();
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+
+      // Build polygon path (straight lines between vertices)
       const buildPolyPath = () => {
         ctx.beginPath();
         const s0 = toScreen(verts[0]);
@@ -363,30 +515,39 @@ export const PolygonCanvas: React.FC<PolygonCanvasProps> = ({
       };
 
       // Polygon fill
-      buildPolyPath();
-      ctx.fillStyle = '#0a0a12';
-      ctx.fill();
+      if (!hyp) {
+        buildPolyPath();
+        ctx.fillStyle = '#0a0a12';
+        ctx.fill();
+      }
 
-      // Clip to polygon for grid and edges
+      // Clip to polygon (or disc for hyperbolic)
       ctx.save();
-      buildPolyPath();
-      ctx.clip();
+      if (hyp) {
+        const discCenter = toScreen({ x: 0, y: 0 });
+        ctx.beginPath();
+        ctx.arc(discCenter.x, discCenter.y, sc - 1, 0, 2 * Math.PI);
+        ctx.clip();
+      } else {
+        buildPolyPath();
+        ctx.clip();
+      }
 
-      // Grid (every 0.1 units in math space)
+      // Grid
       ctx.strokeStyle = '#1a1a2e';
       ctx.lineWidth = 0.5;
-      const gridStep = 0.1;
-      const gridMin = -1.2, gridMax = 1.2;
-      for (let gv = gridMin; gv <= gridMax + 1e-9; gv += gridStep) {
-        const gvr = Math.round(gv * 100) / 100;
-        // vertical line x=gvr
-        const p1 = toScreen({ x: gvr, y: gridMin });
-        const p2 = toScreen({ x: gvr, y: gridMax });
-        ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
-        // horizontal line y=gvr
-        const p3 = toScreen({ x: gridMin, y: gvr });
-        const p4 = toScreen({ x: gridMax, y: gvr });
-        ctx.beginPath(); ctx.moveTo(p3.x, p3.y); ctx.lineTo(p4.x, p4.y); ctx.stroke();
+      if (!hyp) {
+        const gridStep = 0.1;
+        const gridMin = -1.2, gridMax = 1.2;
+        for (let gv = gridMin; gv <= gridMax + 1e-9; gv += gridStep) {
+          const gvr = Math.round(gv * 100) / 100;
+          const p1 = toScreen({ x: gvr, y: gridMin });
+          const p2 = toScreen({ x: gvr, y: gridMax });
+          ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+          const p3 = toScreen({ x: gridMin, y: gvr });
+          const p4 = toScreen({ x: gridMax, y: gvr });
+          ctx.beginPath(); ctx.moveTo(p3.x, p3.y); ctx.lineTo(p4.x, p4.y); ctx.stroke();
+        }
       }
 
       // Graph edges
@@ -399,38 +560,74 @@ export const PolygonCanvas: React.FC<PolygonCanvasProps> = ({
         ctx.lineWidth = isClique ? 6 : 3;
         ctx.shadowBlur = isClique ? 25 : 10;
         ctx.shadowColor = isClique ? '#f59e0b' : '#4f46e5';
-        drawEdgePath(ctx, from.x, from.y, edge.vx, edge.vy, g, verts, toScreen);
+
+        if (hyp) {
+          drawHypEdgePath(ctx, { x: from.x, y: from.y }, { x: edge.tx, y: edge.ty },
+            hypVerts, decks, toScreen, sc);
+        } else {
+          drawEdgePath(ctx, from.x, from.y, edge.tx, edge.ty, g, verts, toScreen);
+        }
       });
       ctx.shadowBlur = 0;
 
       // Pending drag edge
       if (activeDrag) {
+        const actualEnd = getDragActualEnd(activeDrag, g);
+        const snapR = 0.06;
+        const snapTarget = vertices.find(v =>
+          Math.sqrt((v.x - actualEnd.x) ** 2 + (v.y - actualEnd.y) ** 2) < snapR
+        );
+        const displayEnd = snapTarget ? { x: snapTarget.x, y: snapTarget.y } : actualEnd;
+
         ctx.strokeStyle = '#f472b6';
         ctx.shadowBlur = 12;
         ctx.shadowColor = '#db2777';
         if (activeDrag.isDragging) ctx.setLineDash([5, 5]);
         ctx.lineWidth = 2;
-        drawEdgePath(ctx, activeDrag.fromX, activeDrag.fromY, activeDrag.vx, activeDrag.vy, g, verts, toScreen);
+
+        if (hyp) {
+          const approxTarget: Vec2 = { x: activeDrag.fromX + activeDrag.vx, y: activeDrag.fromY + activeDrag.vy };
+          if (snapTarget) {
+            const snapped = hypSnapTo(
+              { x: activeDrag.fromX, y: activeDrag.fromY }, approxTarget,
+              { x: snapTarget.x, y: snapTarget.y },
+              hypVerts, decks
+            );
+            drawHypEdgePath(ctx, { x: activeDrag.fromX, y: activeDrag.fromY }, snapped,
+              hypVerts, decks, toScreen, sc);
+          } else {
+            drawHypEdgePath(ctx, { x: activeDrag.fromX, y: activeDrag.fromY }, approxTarget,
+              hypVerts, decks, toScreen, sc);
+          }
+        } else {
+          if (snapTarget) {
+            const snappedD = snapDisplacementTo(
+              activeDrag.fromX, activeDrag.fromY, activeDrag.vx, activeDrag.vy,
+              snapTarget.x, snapTarget.y, g, verts
+            );
+            drawEdgePath(ctx, activeDrag.fromX, activeDrag.fromY,
+              activeDrag.fromX + snappedD.x, activeDrag.fromY + snappedD.y,
+              g, verts, toScreen);
+          } else {
+            drawEdgePath(ctx, activeDrag.fromX, activeDrag.fromY,
+              activeDrag.fromX + activeDrag.vx, activeDrag.fromY + activeDrag.vy,
+              g, verts, toScreen);
+          }
+        }
+
         ctx.setLineDash([]);
         ctx.shadowBlur = 0;
 
-        // Show actual endpoint
-        const actualEnd = tracePath(
-          { x: activeDrag.fromX, y: activeDrag.fromY },
-          { x: activeDrag.vx, y: activeDrag.vy },
-          g, verts
-        );
-        const sp = toScreen(actualEnd);
-        ctx.fillStyle = '#f472b6';
+        const sp = toScreen(displayEnd);
+        ctx.fillStyle = snapTarget ? '#facc15' : '#f472b6';
         ctx.beginPath();
-        ctx.arc(sp.x, sp.y, 6, 0, Math.PI * 2);
+        ctx.arc(sp.x, sp.y, snapTarget ? 11 : 6, 0, Math.PI * 2);
         ctx.fill();
-        // Crosshair
-        ctx.strokeStyle = '#f472b6';
+        ctx.strokeStyle = snapTarget ? '#facc15' : '#f472b6';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.moveTo(sp.x - 14, sp.y); ctx.lineTo(sp.x + 14, sp.y);
-        ctx.moveTo(sp.x, sp.y - 14); ctx.lineTo(sp.x, sp.y + 14);
+        ctx.moveTo(sp.x - 16, sp.y); ctx.lineTo(sp.x + 16, sp.y);
+        ctx.moveTo(sp.x, sp.y - 16); ctx.lineTo(sp.x, sp.y + 16);
         ctx.stroke();
       }
 
@@ -445,7 +642,12 @@ export const PolygonCanvas: React.FC<PolygonCanvasProps> = ({
             ctx.setLineDash([5, 5]);
             ctx.shadowBlur = 20;
             ctx.shadowColor = '#ef4444';
-            drawEdgePath(ctx, from.x, from.y, fromEdge.vx, fromEdge.vy, g, verts, toScreen);
+            if (hyp) {
+              drawHypEdgePath(ctx, { x: from.x, y: from.y }, { x: fromEdge.tx, y: fromEdge.ty },
+                hypVerts, decks, toScreen, sc);
+            } else {
+              drawEdgePath(ctx, from.x, from.y, fromEdge.tx, fromEdge.ty, g, verts, toScreen);
+            }
             ctx.setLineDash([]);
             ctx.shadowBlur = 0;
           }
@@ -466,59 +668,124 @@ export const PolygonCanvas: React.FC<PolygonCanvasProps> = ({
             ctx.setLineDash([8, 4]);
             ctx.shadowBlur = 20;
             ctx.shadowColor = '#ea580c';
-            drawEdgePath(ctx, from.x, from.y, dup.vx, dup.vy, g, verts, toScreen);
+            if (hyp) {
+              drawHypEdgePath(ctx, { x: from.x, y: from.y }, { x: dup.tx, y: dup.ty },
+                hypVerts, decks, toScreen, sc);
+            } else {
+              drawEdgePath(ctx, from.x, from.y, dup.tx, dup.ty, g, verts, toScreen);
+            }
             ctx.setLineDash([]);
             ctx.shadowBlur = 0;
           }
         }
       }
 
-      ctx.restore(); // end polygon clip
+      ctx.restore(); // end clip
 
       // Polygon boundary edges (drawn on top, outside clip)
       for (let i = 0; i < n; i++) {
         const A = verts[i];
         const B = verts[(i + 1) % n];
-        const sA = toScreen(A);
-        const sB = toScreen(B);
         const color = edgeColor(i);
 
         ctx.strokeStyle = color;
         ctx.lineWidth = 5;
         ctx.shadowBlur = 0;
         ctx.beginPath();
-        ctx.moveTo(sA.x, sA.y);
-        ctx.lineTo(sB.x, sB.y);
+
+        if (hyp) {
+          // Draw as geodesic arc
+          const arc = geodesicArcParams(A, B);
+          const sA = toScreen(A);
+          ctx.moveTo(sA.x, sA.y);
+          drawGeodesicSegment(ctx, arc, toScreen, sc);
+        } else {
+          const sA = toScreen(A);
+          const sB = toScreen(B);
+          ctx.moveTo(sA.x, sA.y);
+          ctx.lineTo(sB.x, sB.y);
+        }
         ctx.stroke();
 
         // Arrow at midpoint
-        const mid = { x: (sA.x + sB.x) / 2, y: (sA.y + sB.y) / 2 };
-        const dx = sB.x - sA.x, dy = sB.y - sA.y;
-        const dl = Math.sqrt(dx * dx + dy * dy);
-        if (dl > 0) {
-          const ux = dx / dl, uy = dy / dl;
-          const arrowLen = 14, arrowW = 6;
-          ctx.fillStyle = color;
-          ctx.beginPath();
-          ctx.moveTo(mid.x + ux * arrowLen / 2, mid.y + uy * arrowLen / 2);
-          ctx.lineTo(mid.x - ux * arrowLen / 2 - uy * arrowW, mid.y - uy * arrowLen / 2 + ux * arrowW);
-          ctx.lineTo(mid.x - ux * arrowLen / 2 + uy * arrowW, mid.y - uy * arrowLen / 2 - ux * arrowW);
-          ctx.closePath();
-          ctx.fill();
-        }
+        const r = i % 4;
+        const reversed = r === 2 || r === 3;
 
-        // Label just outside midpoint (outward = away from center)
-        const mx = (sA.x + sB.x) / 2, my = (sA.y + sB.y) / 2;
-        const outX = mx - cx, outY = my - cy;
-        const outL = Math.sqrt(outX * outX + outY * outY) || 1;
-        const labelOffset = 18;
-        const lx = mx + (outX / outL) * labelOffset;
-        const ly = my + (outY / outL) * labelOffset;
-        ctx.fillStyle = color;
-        ctx.font = `bold ${Math.max(10, Math.min(14, sc * 0.12))}px monospace`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(edgeLabel(i), lx, ly);
+        let midMath: Vec2;
+        let tangentScreen: { dx: number; dy: number };
+
+        if (hyp) {
+          // Midpoint of geodesic arc in screen space
+          const arc = geodesicArcParams(A, B);
+          if (arc.isLine) {
+            midMath = { x: (A.x + B.x) / 2, y: (A.y + B.y) / 2 };
+            const sA2 = toScreen(A), sB2 = toScreen(B);
+            tangentScreen = { dx: sB2.x - sA2.x, dy: sB2.y - sA2.y };
+          } else {
+            const { cx: gcx, cy: gcy, r: gr } = arc;
+            const sA2 = toScreen(A);
+            const sCenter = toScreen({ x: gcx, y: gcy });
+            const sr = gr * sc;
+            const a1 = Math.atan2(sA2.y - sCenter.y, sA2.x - sCenter.x);
+            const sB2 = toScreen(B);
+            const a2 = Math.atan2(sB2.y - sCenter.y, sB2.x - sCenter.x);
+            const normAng2 = (a: number) => ((a % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+            const aMidCCW2 = a1 + normAng2(a2 - a1) / 2;
+            const midSx = sCenter.x + sr * Math.cos(aMidCCW2);
+            const midSy = sCenter.y + sr * Math.sin(aMidCCW2);
+            const midMathX = (midSx - cx) / sc;
+            const midMathY = -(midSy - cy) / sc;
+            const midInsideDisc2 = midMathX * midMathX + midMathY * midMathY < 1;
+            let aMid: number;
+            if (midInsideDisc2) {
+              aMid = aMidCCW2;
+            } else {
+              aMid = a1 + normAng2(a2 - a1) / 2 + Math.PI;
+            }
+            const msx = sCenter.x + sr * Math.cos(aMid);
+            const msy = sCenter.y + sr * Math.sin(aMid);
+            midMath = { x: (msx - cx) / sc, y: -(msy - cy) / sc };
+            // Tangent at aMid in CCW screen direction
+            const tangDx = -Math.sin(aMid);
+            const tangDy = Math.cos(aMid);
+            tangentScreen = midInsideDisc2 ? { dx: tangDx, dy: tangDy } : { dx: -tangDx, dy: -tangDy };
+          }
+          void midMath; // used below
+          const rawDx = reversed ? -tangentScreen.dx : tangentScreen.dx;
+          const rawDy = reversed ? -tangentScreen.dy : tangentScreen.dy;
+          const dl = Math.sqrt(rawDx * rawDx + rawDy * rawDy);
+          const mid = toScreen(midMath);
+          if (dl > 0) {
+            const ux = rawDx / dl, uy = rawDy / dl;
+            const arrowLen = 22, arrowW = 9;
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(mid.x + ux * arrowLen / 2, mid.y + uy * arrowLen / 2);
+            ctx.lineTo(mid.x - ux * arrowLen / 2 - uy * arrowW, mid.y - uy * arrowLen / 2 + ux * arrowW);
+            ctx.lineTo(mid.x - ux * arrowLen / 2 + uy * arrowW, mid.y - uy * arrowLen / 2 - ux * arrowW);
+            ctx.closePath();
+            ctx.fill();
+          }
+        } else {
+          const sA = toScreen(A);
+          const sB = toScreen(B);
+          const mid = { x: (sA.x + sB.x) / 2, y: (sA.y + sB.y) / 2 };
+          const rawDx = sB.x - sA.x, rawDy = sB.y - sA.y;
+          const dx = reversed ? -rawDx : rawDx;
+          const dy = reversed ? -rawDy : rawDy;
+          const dl = Math.sqrt(dx * dx + dy * dy);
+          if (dl > 0) {
+            const ux = dx / dl, uy = dy / dl;
+            const arrowLen = 22, arrowW = 9;
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(mid.x + ux * arrowLen / 2, mid.y + uy * arrowLen / 2);
+            ctx.lineTo(mid.x - ux * arrowLen / 2 - uy * arrowW, mid.y - uy * arrowLen / 2 + ux * arrowW);
+            ctx.lineTo(mid.x - ux * arrowLen / 2 + uy * arrowW, mid.y - uy * arrowLen / 2 - ux * arrowW);
+            ctx.closePath();
+            ctx.fill();
+          }
+        }
       }
 
       // Graph vertices
@@ -542,7 +809,7 @@ export const PolygonCanvas: React.FC<PolygonCanvasProps> = ({
 
     animId = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animId);
-  }, [vertices, edges, genus, activeDrag, crossingInfo, duplicateEdgeInfo, maxClique]);
+  }, [vertices, edges, genus, activeDrag, crossingInfo, duplicateEdgeInfo, maxClique, getDragActualEnd]);
 
   const cursorClass = (vertexDragId || activeDrag?.isDragging) && isPointerOutside
     ? 'cursor-none'

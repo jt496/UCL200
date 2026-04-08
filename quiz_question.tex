@@ -9,12 +9,12 @@
 \usepackage{tikz}
 %%%%%%%%%%%%%%%%%%  compile full/short version
 \newif\iffullversion 
-%\fullversiontrue  % Leave this to compile the full version, comment out for short version
+\fullversiontrue  % Leave this to compile the full version, comment out for short version
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \usetikzlibrary{shapes, positioning, arrows.meta}
 
 \title{The Four Colour Theorem}
-%\author{Mathematics Department}
+\author{John Talbot}
 %\date{\today}
 
 \begin{document}
@@ -22,9 +22,11 @@
 \maketitle
 
 \section*{Colouring Maps}
-In 1852, Francis Guthrie  (a former Mathematics student at UCL) noticed that four colours seemed sufficient to colour any map so that no two adjacent regions shared the same colour. He shared this observation with his brother Frederick, who was at the time a Mathematics student at UCL, Frederick then brought it to the attention of their professor, Augustus De Morgan. 
+In 1852, Francis Guthrie  (a former Mathematics student at UCL) noticed that four colours seemed sufficient to colour any map so that no two adjacent regions shared the same colour. He shared this observation with his brother Frederick, then a Mathematics student at UCL, who brought it to the attention of his professor, Augustus De Morgan. De Morgan was intrigued by this problem and shared it with his friend William Rowan Hamilton, one of the most famous mathematicians of the time. From there it was passed around the mathematical community and becoming known as the \emph{Four Colour Conjecture}.
 
-This problem took another 124 years to solve and even today the only known proofs require a computer to verify parts of the argument.
+This problem took another 124 years to solve and even today the only known proofs are so long and complicated that they require a computer to verify parts of the argument.
+
+\subsection*{Colouring Planar Graphs}
 
 \begin{figure}[h!]
 \begin{tikzpicture}[scale=0.7, thick, every node/.style={font=\tiny\bfseries}]
@@ -119,20 +121,14 @@ This problem took another 124 years to solve and even today the only known proof
 \end{tikzpicture}
 \caption{A 4-coloured map and its 4-coloured dual graph}\label{dual}
 \end{figure}
+
 Rather than thinking about map colouring directly, we can look at the \emph{dual} problem (see Figure \ref{dual}). Each region in the map becomes a \emph{vertex} (a round node) and we draw an \emph{edge} (a straight line) between two vertices if their corresponding regions share a border. A colouring of the map is then equivalent to a colouring of the vertices of this dual graph, where no two adjacent vertices have the same colour.
 
 This dual object is called a \emph{planar graph}. The key property of a planar graph is that it can be drawn on a piece of paper so that no two edges cross (remember edges are the straight lines and vertices are the dots we colour).
 
 
 If we look again at the example in Figure \ref{dual} it isn't hard to see that we can actually colour it with three colours, as shown in Figure \ref{3col}. 
-
-One simple example of a graph that requires $t$ colours to colour it properly is the complete graph on $t$ vertices, $K_t$, where every vertex is connected to every other vertex. Since each vertex is connected to every other vertex, we need a different colour for each vertex. 
-
-
-\begin{question}[Warm-up]
-What is the largest complete graph $K_t$ that can be drawn properly in the plane? (i.e.~with no edges crossings)
-\end{question}
-\begin{figure}
+\begin{figure}[h!]
 \begin{center}
     \begin{tikzpicture}[scale=0.7, every node/.style={circle, draw, minimum size=0.6cm, font=\tiny\bfseries}]
     % Dual Graph
@@ -165,13 +161,18 @@ What is the largest complete graph $K_t$ that can be drawn properly in the plane
 \caption{A 3-colouring of the dual graph}\label{3col}
 \end{figure}
 
+The \emph{complete graph} on $t$ vertices, denoted $K_t$, is the graph in which every vertex is connected by an edge to every other vertex. For example $K_3$ is a triangle. If we want to colour a complete graph so that no two adjacent vertices have the same colour, then we need to give each vertex a different colour. So $K_3$ needs 3 colours, $K_4$ needs 4 colours, and in general $K_t$ needs $t$ colours. 
+\begin{question}
+What is the largest complete graph $K_t$ that can be drawn properly in the plane? (i.e.~with no edge crossings)
+\end{question}
+
 \iffullversion
 \textbf{Solution:\\}
 We can certainly draw $K_4$ in the plane without any edges crossing, as shown in Figure \ref{K4}. However, if we try to draw $K_5$ we will find that no matter how we arrange the vertices and edges, at least one pair of edges will always cross. 
 
-One way to see this is to first think about how $K_3$ can be drawn in the plane. Clearly it must form a triangle. Now if we want to add a fourth vertex to create $K_4$, we can place it either inside or outside this triangle. However in both cases our drawing of $K_4$ will consist of a triangle with a single central vertex inside it, and  the edges divide the large triangle into three smaller triangles (so it looks something like Figure \ref{K4}).
+One way to see this is to first think about how $K_3$ can be drawn in the plane. It has 3 vertices each pair joined by an edge so it is simply a triangle. If we want to add a fourth vertex, to create $K_4$, we can place it either inside or outside this triangle. However in both cases our drawing of $K_4$ will consist of a triangle with a single central vertex inside it, and the edges will subdivide the large triangle into three smaller triangles (so it looks something like Figure \ref{K4}).
 
-How can we now add a fifth vertex? If we place it inside any of the smaller triangles then there is always one vertex that we cannot connect it to without crossing an edge. If we place it outside the large triangle then we can't connect it to the central vertex without crossing an edge. So we can't draw $K_5$ in the plane without edges crossing.
+How can we now add a fifth vertex? If we place it inside any of the smaller triangles then there is always one vertex that we cannot connect it to without an edge crossing (namely the vertex not in the same triangle). If we place it outside the large triangle then we can't connect it to the central vertex without an edge crossing. So we can't draw $K_5$ in the plane without edges crossing!
 \begin{figure}[h]
 \begin{center}
 \begin{tikzpicture}[scale=1.2]
@@ -226,7 +227,7 @@ How can we now add a fifth vertex? If we place it inside any of the smaller tria
 
 What if rather than colouring graphs drawn in the plane we want to colour graphs drawn on a doughnut or \emph{torus} as mathematicians call it? (See Figure \ref{torus}.)
 \begin{question}
-What is the largest complete graph $K_t$ that can be drawn properly on a torus? (i.e.~with no edges crossings)
+What is the largest complete graph $K_t$ that can be drawn properly on a torus? (i.e.~with no edge crossings)
 \end{question}
 Drawing a graph on a torus can be hard to visualize, but there is a nice trick we can use to help: we can draw the graph on a piece of paper and then roll it up into a cylinder, sticking the left and right edges together. We can can roll the cylinder up into a torus, sticking the top and bottom circles of the cylinder together. (In practice doing this by hand with a piece of paper is not easy, so here is an online tool to help you explore this problem \url{https://www.homepages.ucl.ac.uk/~ucahjmt/doughnut/} and find the answer.)
 
@@ -251,13 +252,18 @@ The largest complete graph that can be drawn properly on a torus is $K_7$. See F
 \caption{A drawing of $K_7$ on a torus (3D-version)}\label{K7:3d}
         \end{figure}
 
-To see why $K_8$ cannot be drawn on a torus without edges crossing, we need to use a magical formula (called the Euler characteristic) that tells us how the number of vertices ($V$), edges ($E$), and faces ($F$) of a graph drawn on a surface are related. For a torus the formula says that: 
+To see why $K_8$ cannot be drawn on a torus without edges crossing, we need to use a magical formula (called the \emph{Euler characteristic}) that tells us how the number of vertices ($V$), edges ($E$), and faces ($F$) of a graph drawn on a surface are related. This formula is an invariant of the surface (which means that it is the same for all graphs drawn on the same surface). For a torus the formula says that: 
 \begin{equation}\label{EC:eq}
 V- E+ F \ge 0.
 \end{equation}
-We also need to use the fact that if a graph has at least 3 vertices and no loops or multiple edges then $3F \le 2E$. (This is because every face of a graph contains at least 3 edges, and each edge belongs to exactly 2 faces.)
 
-Putting these two facts together we can check whether $K_8$ can be drawn on a torus without edges crossing. Since $K_8$ has 8 vertices and $\binom{8}{2} = 28$ edges, if we could draw it on a torus without edges crossing then we would have $V=8$ and $E=28$. Using the inequality $3F \le 2E$ we have 
+We also need to use the fact that if a graph has at least 3 vertices and is \emph{connected} (this just means we can travel between any two vertices by following edges) then
+\begin{equation}\label{EF:eq}
+3F \le 2E.
+\end{equation}
+This is essentially because every face of a graph contains at least 3 edges, and each edge belongs to at most 2 faces.
+
+Putting these two facts together we can check whether $K_8$ can be drawn on a torus without edge crossings. Since $K_8$ has 8 vertices and $\binom{8}{2} = 28$ edges, if we could draw it on a torus without edge crossings then, using the inequality $3F \le 2E$, we have 
 \[F \le \frac{2E}{3} = \frac{2 \cdot 28}{3} = \frac{56}{3}.\] Putting this into the Euler characteristic formula we have \[V - E + F \le 8 - 28 + \frac{56}{3} = -\frac{4}{3} < 0,\] which contradicts(\ref{EC:eq}). So $K_8$ cannot be drawn on a torus without edges crossing.
 \fi
 \end{document}

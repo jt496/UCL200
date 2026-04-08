@@ -5,19 +5,25 @@ import {
   Lock, Unlock, Eraser,
 } from 'lucide-react';
 import {
-  getPolygonVerts, firstCrossing, wrapDir, wrapPos, edgePartner,
+  getPolygonVerts, getDeckTransforms,
+  firstCrossing, wrapDir, wrapPos, edgePartner,
+  hypGetEdgeSegs,
   insidePolygon, edgeColor, edgeLabel,
+  isHyperbolic,
   add, scale, norm, len,
   type Vec2,
 } from './geometry';
 
 export type Vertex = { id: string; x: number; y: number };
+// tx, ty: absolute position of virtual endpoint in the universal cover
+// g=1: (tx,ty) ∈ R² (may be outside [0,1]²)
+// g≥2: (tx,ty) ∈ Poincaré disc D
 export type Edge = {
   id: string;
   fromId: string;
   toId: string;
-  vx: number; // displacement from 'from' vertex (in math coords)
-  vy: number;
+  tx: number;
+  ty: number;
 };
 
 type GraphState = { vertices: Vertex[]; edges: Edge[] };
@@ -50,12 +56,17 @@ function pointToSegDist(px: number, py: number, x1: number, y1: number, x2: numb
 
 // Get path segments for an edge (for crossing checks in math coords)
 function getEdgeSegs(
-  fromX: number, fromY: number, vx: number, vy: number,
+  fromX: number, fromY: number, tx: number, ty: number,
   g: number, verts: Vec2[]
 ): Array<[Vec2, Vec2]> {
+  if (isHyperbolic(g)) {
+    const decks = getDeckTransforms(verts);
+    return hypGetEdgeSegs({ x: fromX, y: fromY }, { x: tx, y: ty }, verts, decks);
+  }
+  // g=1: flat torus, tx/ty are absolute endpoint, displacement = (tx-fromX, ty-fromY)
   const segs: Array<[Vec2, Vec2]> = [];
   let pos: Vec2 = { x: fromX, y: fromY };
-  let rem: Vec2 = { x: vx, y: vy };
+  let rem: Vec2 = { x: tx - fromX, y: ty - fromY };
   for (let iter = 0; iter < 6; iter++) {
     const cross = firstCrossing(pos, rem, verts);
     if (!cross) {
@@ -72,7 +83,6 @@ function getEdgeSegs(
   return segs;
 }
 
-// Check whether two sets of segments intersect (with shared vertex awareness)
 function segsIntersect(
   segs1: Array<[Vec2, Vec2]>, segs2: Array<[Vec2, Vec2]>,
   e1fromId: string, e1toId: string, e2fromId: string, e2toId: string
@@ -88,32 +98,29 @@ function segsIntersect(
 }
 
 function isGraphValid(vList: Vertex[], eList: Edge[], g: number, verts: Vec2[]): boolean {
-  // Check edge crossings
   for (let i = 0; i < eList.length; i++) {
     const e1 = eList[i];
     const from1 = vList.find(v => v.id === e1.fromId);
     if (!from1) continue;
-    const segs1 = getEdgeSegs(from1.x, from1.y, e1.vx, e1.vy, g, verts);
+    const segs1 = getEdgeSegs(from1.x, from1.y, e1.tx, e1.ty, g, verts);
     for (let j = i + 1; j < eList.length; j++) {
       const e2 = eList[j];
       const from2 = vList.find(v => v.id === e2.fromId);
       if (!from2) continue;
-      const segs2 = getEdgeSegs(from2.x, from2.y, e2.vx, e2.vy, g, verts);
+      const segs2 = getEdgeSegs(from2.x, from2.y, e2.tx, e2.ty, g, verts);
       if (segsIntersect(segs1, segs2, e1.fromId, e1.toId, e2.fromId, e2.toId)) return false;
     }
   }
-  // Check vertex-vertex proximity
   for (const v of vList) {
     for (const ov of vList) {
       if (v.id === ov.id) continue;
       if (Math.sqrt((v.x - ov.x) ** 2 + (v.y - ov.y) ** 2) < 0.05) return false;
     }
-    // Check vertex-edge proximity
     for (const e of eList) {
       if (e.fromId === v.id || e.toId === v.id) continue;
       const from = vList.find(fv => fv.id === e.fromId);
       if (!from) continue;
-      const segs = getEdgeSegs(from.x, from.y, e.vx, e.vy, g, verts);
+      const segs = getEdgeSegs(from.x, from.y, e.tx, e.ty, g, verts);
       for (const [a, b] of segs) {
         if (pointToSegDist(v.x, v.y, a.x, a.y, b.x, b.y) < 0.03) return false;
       }
@@ -200,7 +207,6 @@ function App() {
     setEdges(last.edges);
   }, [history]);
 
-  // Keyboard shortcuts
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z') {
@@ -226,7 +232,6 @@ function App() {
     lines.push(``);
     lines.push(`\\begin{tikzpicture}[scale=3.5]`);
 
-    // Polygon boundary
     for (let i = 0; i < n; i++) {
       const A = verts[i];
       const B = verts[(i + 1) % n];
@@ -234,47 +239,59 @@ function App() {
       const tikzCol = col.replace('#', '');
       lines.push(`  \\definecolor{ec${i}}{HTML}{${tikzCol}}`);
       lines.push(`  \\draw[ec${i}, line width=1.5pt] (${A.x.toFixed(4)},${A.y.toFixed(4)}) -- (${B.x.toFixed(4)},${B.y.toFixed(4)});`);
-      // Arrow at midpoint
       const mx = ((A.x + B.x) / 2).toFixed(4);
       const my = ((A.y + B.y) / 2).toFixed(4);
       const lbl = edgeLabel(i);
       lines.push(`  \\node[ec${i}, font=\\tiny] at (${mx},${my}) {${lbl}};`);
     }
 
-    // Clip scope for edges
     lines.push(`  \\begin{scope}`);
     const polyCoords = verts.map(v => `(${v.x.toFixed(4)},${v.y.toFixed(4)})`).join(' -- ');
     lines.push(`    \\clip ${polyCoords} -- cycle;`);
 
-    edges.forEach(edge => {
-      const from = vertices.find(v => v.id === edge.fromId);
-      if (!from) return;
-      const isH = highlightedClique.size >= 3 &&
-        highlightedClique.has(edge.fromId) && highlightedClique.has(edge.toId);
-      const style = isH ? 'thick, orange!80!yellow' : 'violet!60!blue';
+    if (!isHyperbolic(g)) {
+      edges.forEach(edge => {
+        const from = vertices.find(v => v.id === edge.fromId);
+        if (!from) return;
+        const isH = highlightedClique.size >= 3 &&
+          highlightedClique.has(edge.fromId) && highlightedClique.has(edge.toId);
+        const style = isH ? 'thick, orange!80!yellow' : 'violet!60!blue';
 
-      // Collect segments
-      let pos: Vec2 = { x: from.x, y: from.y };
-      let rem: Vec2 = { x: edge.vx, y: edge.vy };
-      for (let iter = 0; iter < 6; iter++) {
-        const cross = firstCrossing(pos, rem, verts);
-        if (!cross) {
-          const end = add(pos, rem);
-          lines.push(`    \\draw[${style}] (${pos.x.toFixed(4)},${pos.y.toFixed(4)}) -- (${end.x.toFixed(4)},${end.y.toFixed(4)});`);
-          break;
+        let pos: Vec2 = { x: from.x, y: from.y };
+        let rem: Vec2 = { x: edge.tx - from.x, y: edge.ty - from.y };
+        for (let iter = 0; iter < 6; iter++) {
+          const cross = firstCrossing(pos, rem, verts);
+          if (!cross) {
+            const end = add(pos, rem);
+            lines.push(`    \\draw[${style}] (${pos.x.toFixed(4)},${pos.y.toFixed(4)}) -- (${end.x.toFixed(4)},${end.y.toFixed(4)});`);
+            break;
+          }
+          const crossPt = add(pos, scale(rem, cross.t));
+          lines.push(`    \\draw[${style}] (${pos.x.toFixed(4)},${pos.y.toFixed(4)}) -- (${crossPt.x.toFixed(4)},${crossPt.y.toFixed(4)});`);
+          const remLen = len(rem) * (1 - cross.t);
+          const newDir = wrapDir(norm(rem), cross.edgeIndex, g, verts);
+          pos = wrapPos(crossPt, cross.edgeIndex, g, verts);
+          rem = scale(newDir, remLen);
         }
-        const crossPt = add(pos, scale(rem, cross.t));
-        lines.push(`    \\draw[${style}] (${pos.x.toFixed(4)},${pos.y.toFixed(4)}) -- (${crossPt.x.toFixed(4)},${crossPt.y.toFixed(4)});`);
-        const remLen = len(rem) * (1 - cross.t);
-        const newDir = wrapDir(norm(rem), cross.edgeIndex, g, verts);
-        pos = wrapPos(crossPt, cross.edgeIndex, g, verts);
-        rem = scale(newDir, remLen);
-      }
-    });
+      });
+    } else {
+      // Hyperbolic: just draw straight segments (TikZ approximation)
+      edges.forEach(edge => {
+        const from = vertices.find(v => v.id === edge.fromId);
+        if (!from) return;
+        const isH = highlightedClique.size >= 3 &&
+          highlightedClique.has(edge.fromId) && highlightedClique.has(edge.toId);
+        const style = isH ? 'thick, orange!80!yellow' : 'violet!60!blue';
+        const decks = getDeckTransforms(verts);
+        const segs = hypGetEdgeSegs({ x: from.x, y: from.y }, { x: edge.tx, y: edge.ty }, verts, decks);
+        for (const [a, b] of segs) {
+          lines.push(`    \\draw[${style}] (${a.x.toFixed(4)},${a.y.toFixed(4)}) -- (${b.x.toFixed(4)},${b.y.toFixed(4)});`);
+        }
+      });
+    }
 
     lines.push(`  \\end{scope}`);
 
-    // Vertices
     vertices.forEach(v => {
       lines.push(`  \\filldraw[fill=black, draw=violet!60!blue] (${v.x.toFixed(4)},${v.y.toFixed(4)}) circle (1.2pt); % ${vLabel.get(v.id)}`);
     });
@@ -348,7 +365,6 @@ function App() {
     setEdges([]);
     setHistory([]);
     setGenus(g);
-    // Load saved graph for the new genus
     const saved = localStorage.getItem(`genus-graph-${g}`);
     if (saved) {
       try {
@@ -370,7 +386,7 @@ function App() {
       for (const edge of edges) {
         const ev = vertices.find(v => v.id === edge.fromId);
         if (!ev) continue;
-        const segs = getEdgeSegs(ev.x, ev.y, edge.vx, edge.vy, g, verts);
+        const segs = getEdgeSegs(ev.x, ev.y, edge.tx, edge.ty, g, verts);
         for (const [a, b] of segs) {
           if (pointToSegDist(x, y, a.x, a.y, b.x, b.y) < 0.035) return;
         }
@@ -380,7 +396,7 @@ function App() {
     setVertices(prev => [...prev, { id: crypto.randomUUID(), x, y }]);
   };
 
-  const addEdge = (fromId: string, toId: string, vx: number, vy: number) => {
+  const addEdge = (fromId: string, toId: string, tx: number, ty: number) => {
     if (preventCrossings) {
       const dup = edges.find(e =>
         (e.fromId === fromId && e.toId === toId) ||
@@ -395,11 +411,11 @@ function App() {
       const verts = getPolygonVerts(g);
       const from = vertices.find(v => v.id === fromId);
       if (!from) return;
-      const newSegs = getEdgeSegs(from.x, from.y, vx, vy, g, verts);
+      const newSegs = getEdgeSegs(from.x, from.y, tx, ty, g, verts);
       for (const edge of edges) {
         const ev = vertices.find(v => v.id === edge.fromId);
         if (!ev) continue;
-        const segs = getEdgeSegs(ev.x, ev.y, edge.vx, edge.vy, g, verts);
+        const segs = getEdgeSegs(ev.x, ev.y, edge.tx, edge.ty, g, verts);
         if (segsIntersect(newSegs, segs, fromId, toId, edge.fromId, edge.toId)) {
           setCrossingInfo({ fromId, toId });
           setTimeout(() => setCrossingInfo(null), 500);
@@ -408,7 +424,7 @@ function App() {
       }
     }
     saveToHistory();
-    setEdges(prev => [...prev, { id: crypto.randomUUID(), fromId, toId, vx, vy }]);
+    setEdges(prev => [...prev, { id: crypto.randomUUID(), fromId, toId, tx, ty }]);
   };
 
   const moveVertex = (id: string, ddx: number, ddy: number) => {
@@ -418,10 +434,8 @@ function App() {
     const verts = getPolygonVerts(g);
     const newPos: Vec2 = { x: movedV.x + ddx, y: movedV.y + ddy };
 
-    // Block if outside polygon
     if (!insidePolygon(newPos, verts)) return;
 
-    // Check proximity to other vertices
     if (preventCrossings) {
       for (const ov of vertices) {
         if (ov.id === id) continue;
@@ -429,31 +443,46 @@ function App() {
       }
     }
 
-    // Update vertex position
     setVertices(prev => prev.map(v =>
       v.id === id ? { ...v, x: newPos.x, y: newPos.y } : v
     ));
 
-    // Update edges
     setEdges(prev => prev.map(e => {
-      if (e.fromId === id) {
-        // fromId moved: adjust vx,vy so the endpoint tracks
-        return { ...e, vx: e.vx - ddx, vy: e.vy - ddy };
-      }
-      if (e.toId === id) {
-        // toId moved: need to wrap the delta through the edge's crossing
-        const from = vertices.find(v => v.id === e.fromId);
-        if (!from) return e;
-        const cross = firstCrossing({ x: from.x, y: from.y }, { x: e.vx, y: e.vy }, verts);
-        let dv: Vec2;
-        if (!cross) {
-          dv = { x: ddx, y: ddy };
-        } else {
-          dv = wrapDir({ x: ddx, y: ddy }, edgePartner(cross.edgeIndex), g, verts);
+      if (isHyperbolic(g)) {
+        // For hyperbolic: tx,ty are absolute disc coords.
+        // When from-vertex moves, tx,ty (absolute endpoint) stays the same.
+        // When to-vertex moves, approximate: shift tx,ty by (ddx,ddy).
+        if (e.fromId === id) {
+          return e; // endpoint doesn't change
         }
-        return { ...e, vx: e.vx + dv.x, vy: e.vy + dv.y };
+        if (e.toId === id) {
+          return { ...e, tx: e.tx + ddx, ty: e.ty + ddy };
+        }
+        return e;
+      } else {
+        // g=1 flat torus
+        if (e.fromId === id) {
+          // tx,ty is absolute endpoint; from-vertex moved, so endpoint stays same,
+          // meaning displacement (tx-from.x, ty-from.y) changes by (-ddx,-ddy).
+          // But tx,ty is absolute, so no update needed.
+          return e;
+        }
+        if (e.toId === id) {
+          // to-vertex moved: compute wrapped delta
+          const from = vertices.find(v => v.id === e.fromId);
+          if (!from) return e;
+          const disp: Vec2 = { x: e.tx - from.x, y: e.ty - from.y };
+          const cross = firstCrossing({ x: from.x, y: from.y }, disp, verts);
+          let dv: Vec2;
+          if (!cross) {
+            dv = { x: ddx, y: ddy };
+          } else {
+            dv = wrapDir({ x: ddx, y: ddy }, edgePartner(cross.edgeIndex), g, verts);
+          }
+          return { ...e, tx: e.tx + dv.x, ty: e.ty + dv.y };
+        }
+        return e;
       }
-      return e;
     }));
   };
 
@@ -480,7 +509,6 @@ function App() {
     const next = !preventCrossings;
     setPreventCrossings(next);
     if (next) {
-      // Clean up existing crossings
       const g = genus;
       const verts = getPolygonVerts(g);
       setEdges(prevEdges => {
@@ -488,19 +516,18 @@ function App() {
         for (const edge of prevEdges) {
           const from = vertices.find(v => v.id === edge.fromId);
           if (!from) continue;
-          const newSegs = getEdgeSegs(from.x, from.y, edge.vx, edge.vy, g, verts);
+          const newSegs = getEdgeSegs(from.x, from.y, edge.tx, edge.ty, g, verts);
           let hasCross = false;
           for (const se of safe) {
             const sfrom = vertices.find(v => v.id === se.fromId);
             if (!sfrom) continue;
-            const ssegs = getEdgeSegs(sfrom.x, sfrom.y, se.vx, se.vy, g, verts);
+            const ssegs = getEdgeSegs(sfrom.x, sfrom.y, se.tx, se.ty, g, verts);
             if (segsIntersect(newSegs, ssegs, edge.fromId, edge.toId, se.fromId, se.toId)) {
               hasCross = true; break;
             }
           }
           if (!hasCross) safe.push(edge);
         }
-        // Dedup
         const deduped: Edge[] = [];
         for (const edge of safe) {
           const isDup = deduped.some(e =>
@@ -538,6 +565,7 @@ function App() {
                     Opposite edges are glued with reversed orientation according to the word{' '}
                     <span className="font-mono text-indigo-200">a₁b₁a₁⁻¹b₁⁻¹ … aᵍbᵍaᵍ⁻¹bᵍ⁻¹</span>.
                     For g=1 this gives the torus; for g=2, the double torus; etc.
+                    For g≥2 the polygon is drawn in the Poincaré disc model of hyperbolic geometry.
                   </p>
                 </div>
                 <div className="bg-slate-800 rounded-xl p-4">
