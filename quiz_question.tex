@@ -9,7 +9,7 @@
 \usepackage{tikz}
 %%%%%%%%%%%%%%%%%%  compile full/short version
 \newif\iffullversion 
-\fullversiontrue  % Leave this to compile the full version, comment out for short version
+%\fullversiontrue  % Leave this to compile the full version, comment out for short version
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \usetikzlibrary{shapes, positioning, arrows.meta}
 
@@ -165,7 +165,7 @@ The \emph{complete graph} on $t$ vertices, denoted $K_t$, is the graph in which 
 \begin{question}
 What is the largest complete graph $K_t$ that can be drawn properly in the plane? (i.e.~with no edge crossings)
 \end{question}
-
+(Note that this gives us a lower bound on the number of colours required to colour all planar graphs.)
 \iffullversion
 \textbf{Solution:\\}
 We can certainly draw $K_4$ in the plane without any edges crossing, as shown in Figure \ref{K4}. However, if we try to draw $K_5$ we will find that no matter how we arrange the vertices and edges, at least one pair of edges will always cross. 
@@ -202,8 +202,7 @@ How can we now add a fifth vertex? If we place it inside any of the smaller tria
 
 \fi
 
-\section*{Graphs on a Torus}
-
+\section*{Doughnut Graphs}
 \begin{figure}[!h]
 \begin{center}
 \begin{tikzpicture}[scale=0.8]
@@ -225,7 +224,9 @@ How can we now add a fifth vertex? If we place it inside any of the smaller tria
 
 % To start with let us try to find the largest complete graph $K_t$ that can be drawn properly on a torus (i.e.~with no edges crossings).
 
-What if rather than drawing graphs in the plane we try to draw them on a doughnut or \emph{torus} as mathematicians call it? (See Figure \ref{torus}.)
+What if rather than drawing graphs in the plane we try to draw them on a doughnut or \emph{torus} as mathematicians call it? (See Figure \ref{torus}.) 
+
+We can still ask the same question about colouring: how many colours do we need to colour the vertices of a graph drawn on a torus without edge crossings so that no two adjacent vertices have the same colour? We can get a lower bound on the number of colours required by answering the following question.
 \begin{question}
 What is the largest complete graph $K_t$ that can be drawn properly on a torus? (i.e.~with no edge crossings)
 \end{question}
