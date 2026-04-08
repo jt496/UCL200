@@ -239,7 +239,7 @@ The largest complete graph that can be drawn properly on a torus is $K_7$. See F
 
 \begin{figure}[h]
     \begin{center}
-\input{2.tikz}
+\input{2b.tikz}
             \end{center}
 \caption{A drawing of $K_7$ on a torus (2D-version)}\label{K7}
         \end{figure}
@@ -257,14 +257,25 @@ To see why $K_8$ cannot be drawn on a torus without edges crossing, we need to u
 V- E+ F \ge 0.
 \end{equation}
 
-We also need to use the fact that if a graph has at least 3 vertices and is \emph{connected} (this just means we can travel between any two vertices by following edges) then
+We also need to use the fact that if a graph has at least 3 edges and is \emph{connected} (this just means we can travel between any two vertices by following edges) then
 \begin{equation}\label{EF:eq}
 3F \le 2E.
 \end{equation}
-This is essentially because every face of a graph contains at least 3 edges, and each edge belongs to at most 2 faces.
+(This is essentially because every face of a graph contains at least 3 edges, and each edge belongs to at most 2 faces.)
 
 Putting these two facts together we can check whether $K_8$ can be drawn on a torus without edge crossings. Since $K_8$ has 8 vertices and $\binom{8}{2} = 28$ edges, if we could draw it on a torus without edge crossings then, using the inequality $3F \le 2E$, we have 
-\[F \le \frac{2E}{3} = \frac{2 \cdot 28}{3} = \frac{56}{3}.\] Putting this into the Euler characteristic formula we have \[V - E + F \le 8 - 28 + \frac{56}{3} = -\frac{4}{3} < 0,\] which contradicts(\ref{EC:eq}). So $K_8$ cannot be drawn on a torus without edges crossing.
+\[F \le \frac{2E}{3} = \frac{2 \cdot 28}{3} = \frac{56}{3}.\] Putting this into the Euler characteristic formula we have \[V - E + F \le 8 - 28 + \frac{56}{3} = -\frac{4}{3} < 0,\] which contradicts (\ref{EC:eq}). So $K_8$ cannot be drawn on a torus without edges crossing.
 \fi
+The \emph{utility} graph $K_{t,t}$ is the graph that consists of two sets of $t$ vertices with edges between any pair of vertices from different classes.
+\begin{question}[Bonus]
+What is the largest utility graph you can draw in the plane without edge crossings? How about on the torus?
+\end{question}
+\iffullversion
+\textbf{Solution:\\}
+
+
+
+\fi
+
 \end{document}
 
