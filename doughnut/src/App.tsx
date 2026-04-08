@@ -95,7 +95,7 @@ function isGraphValid(vList: Vertex[], eList: Edge[]): boolean {
 function getMaxClique(vertices: Vertex[], edges: Edge[]): Set<string> {
   const n = vertices.length;
   if (n === 0) return new Set();
-  
+
   const adj = new Map<string, Set<string>>();
   vertices.forEach(v => adj.set(v.id, new Set()));
   edges.forEach(e => {
@@ -111,7 +111,7 @@ function getMaxClique(vertices: Vertex[], edges: Edge[]): Set<string> {
       return;
     }
     if (r.length + p.length <= maxR.length) return;
-    
+
     const pivot = [...p, ...x][0];
     const pNeighbors = adj.get(pivot) || new Set();
     const candidates = p.filter(v => !pNeighbors.has(v));
@@ -565,7 +565,7 @@ function App() {
       lines.push(`  \\draw[red, line width=1.5pt] (0,0) -- (1,0);`);
       lines.push(`  \\draw[red, line width=1.5pt] (0,1) -- (1,1);`);
       vertices.forEach(v => {
-        lines.push(`  \\filldraw[fill=black, draw=violet!60!blue] (${v.x.toFixed(4)},${fy(v.y).toFixed(4)}) circle (0.6pt); % ${vLabel.get(v.id)}`);
+        lines.push(`  \\filldraw[fill=violet!60!blue, draw=violet!60!blue] (${v.x.toFixed(4)},${fy(v.y).toFixed(4)}) circle (0.6pt); % ${vLabel.get(v.id)}`);
       });
       lines.push(`\\end{tikzpicture}`);
     } else {

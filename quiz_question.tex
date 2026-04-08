@@ -170,9 +170,9 @@ What is the largest complete graph $K_t$ that can be drawn properly in the plane
 \textbf{Solution:\\}
 We can certainly draw $K_4$ in the plane without any edges crossing, as shown in Figure \ref{K4}. However, if we try to draw $K_5$ we will find that no matter how we arrange the vertices and edges, at least one pair of edges will always cross. 
 
-One way to see this is to first think about how $K_3$ can be drawn in the plane. It has 3 vertices each pair joined by an edge so it is simply a triangle. If we want to add a fourth vertex, to create $K_4$, we can place it either inside or outside this triangle. However in both cases our drawing of $K_4$ will consist of a triangle with a single central vertex inside it, and the edges will subdivide the large triangle into three smaller triangles (so it looks something like Figure \ref{K4}).
+One way to see this is to first think about how $K_3$ can be drawn in the plane. It has 3 vertices, each pair are joined by an edge, so it is simply a triangle. If we want to add a fourth vertex, to create $K_4$, we can place it either inside or outside this triangle. However in both cases our drawing of $K_4$ will consist of a triangle with a single central vertex inside it, and the edges will subdivide the large triangle into three smaller triangles (so it looks something like Figure \ref{K4}).
 
-How can we now add a fifth vertex? If we place it inside any of the smaller triangles then there is always one vertex that we cannot connect it to without an edge crossing (namely the vertex not in the same triangle). If we place it outside the large triangle then we can't connect it to the central vertex without an edge crossing. So we can't draw $K_5$ in the plane without edges crossing!
+How can we now add a fifth vertex? If we place it inside any of the smaller triangles then there is always one vertex that we cannot connect it to without edge crossings (namely the vertex not in the same triangle). If we place it outside the large triangle then we can't connect it to the central vertex without edge crossings. So we can't draw $K_5$ in the plane without edge crossings!
 \begin{figure}[h]
 \begin{center}
 \begin{tikzpicture}[scale=1.2]
@@ -202,7 +202,7 @@ How can we now add a fifth vertex? If we place it inside any of the smaller tria
 
 \fi
 
-\section*{Colouring Graphs on a Torus}
+\section*{Graphs on a Torus}
 
 \begin{figure}[!h]
 \begin{center}
@@ -225,7 +225,7 @@ How can we now add a fifth vertex? If we place it inside any of the smaller tria
 
 % To start with let us try to find the largest complete graph $K_t$ that can be drawn properly on a torus (i.e.~with no edges crossings).
 
-What if rather than colouring graphs drawn in the plane we want to colour graphs drawn on a doughnut or \emph{torus} as mathematicians call it? (See Figure \ref{torus}.)
+What if rather than drawing graphs in the plane we try to draw them on a doughnut or \emph{torus} as mathematicians call it? (See Figure \ref{torus}.)
 \begin{question}
 What is the largest complete graph $K_t$ that can be drawn properly on a torus? (i.e.~with no edge crossings)
 \end{question}
@@ -239,7 +239,7 @@ The largest complete graph that can be drawn properly on a torus is $K_7$. See F
 
 \begin{figure}[h]
     \begin{center}
-\input{2b.tikz}
+\input{2c.tikz}
             \end{center}
 \caption{A drawing of $K_7$ on a torus (2D-version)}\label{K7}
         \end{figure}
@@ -257,24 +257,81 @@ To see why $K_8$ cannot be drawn on a torus without edges crossing, we need to u
 V- E+ F \ge 0.
 \end{equation}
 
-We also need to use the fact that if a graph has at least 3 edges and is \emph{connected} (this just means we can travel between any two vertices by following edges) then
-\begin{equation}\label{EF:eq}
-3F \le 2E.
-\end{equation}
-(This is essentially because every face of a graph contains at least 3 edges, and each edge belongs to at most 2 faces.)
+We also need to use the fact that if a graph has at least 3 edges and is \emph{connected} (this just means we can travel between any two vertices by following edges) then $F \le 2E/3$. (This is essentially because every face of such a graph contains at least 3 edges, and each edge belongs to at most 2 faces.)
 
 Putting these two facts together we can check whether $K_8$ can be drawn on a torus without edge crossings. Since $K_8$ has 8 vertices and $\binom{8}{2} = 28$ edges, if we could draw it on a torus without edge crossings then, using the inequality $3F \le 2E$, we have 
-\[F \le \frac{2E}{3} = \frac{2 \cdot 28}{3} = \frac{56}{3}.\] Putting this into the Euler characteristic formula we have \[V - E + F \le 8 - 28 + \frac{56}{3} = -\frac{4}{3} < 0,\] which contradicts (\ref{EC:eq}). So $K_8$ cannot be drawn on a torus without edges crossing.
+\[F \le \frac{2E}{3} = \frac{2 \cdot 28}{3} = \frac{56}{3}.\] But then  \[V - E + F \le 8 - 28 + \frac{56}{3} = -\frac{4}{3} < 0,\] which contradicts the Euler characteristic bound (\ref{EC:eq}). So $K_8$ cannot be drawn on a torus without edges crossing.
+
+[This argument can actually be adapted to prove the \emph{Seven Colour Theorem}, which says that any graph drawn without edge crossings on a torus can be coloured using 7 colours. The basic idea is that you can show that any graph drawn on a torus has at least one vertex that has at most 6 neighbours. You can remove that vertex and colour the remaining graph using 7 colours (by induction!), and then add the vertex back in and colour it using one of the 7 colours that is not used by any of its neighbours.]
 \fi
-The \emph{utility} graph $K_{t,t}$ is the graph that consists of two sets of $t$ vertices with edges between any pair of vertices from different classes.
-\begin{question}[Bonus]
-What is the largest utility graph you can draw in the plane without edge crossings? How about on the torus?
+
+\subsection*{Utility graphs}
+The \emph{utility} graph $K_{t,t}$ is the graph that consists of two sets of $t$ vertices with edges between any pair of vertices from different classes. (See Figure \ref{utility_graphs}.)
+\begin{figure}[h!]
+\begin{center}
+    \begin{tikzpicture}[scale=0.8, every node/.style={circle, draw, minimum size=0.6cm}]
+        % K_{2,2}
+        \node[fill=blue!40] (A1) at (0, 1.5) {};
+        \node[fill=blue!40] (A2) at (0, -1.5) {};
+        \node[fill=red!40] (B1) at (2.5, 1.5) {};
+        \node[fill=red!40] (B2) at (2.5, -1.5) {};
+        
+        \draw[thick] (A1) -- (B1);
+        \draw[thick] (A1) -- (B2);
+        \draw[thick] (A2) -- (B1);
+        \draw[thick] (A2) -- (B2);
+        
+        \node[draw=none, fill=none, rectangle] at (1.25, -2.5) {$K_{2,2}$};
+    \end{tikzpicture}
+    \hskip 3cm
+    \begin{tikzpicture}[scale=0.8, every node/.style={circle, draw, minimum size=0.6cm}]
+        % K_{3,3}
+        \node[fill=blue!40] (A1) at (0, 2) {};
+        \node[fill=blue!40] (A2) at (0, 0) {};
+        \node[fill=blue!40] (A3) at (0, -2) {};
+        
+        \node[fill=red!40] (B1) at (3, 2) {};
+        \node[fill=red!40] (B2) at (3, 0) {};
+        \node[fill=red!40] (B3) at (3, -2) {};
+        
+        \draw[thick] (A1) -- (B1); \draw[thick] (A1) -- (B2); \draw[thick] (A1) -- (B3);
+        \draw[thick] (A2) -- (B1); \draw[thick] (A2) -- (B2); \draw[thick] (A2) -- (B3);
+        \draw[thick] (A3) -- (B1); \draw[thick] (A3) -- (B2); \draw[thick] (A3) -- (B3);
+        
+        \node[draw=none, fill=none, rectangle] at (1.5, -3) {$K_{3,3}$};
+    \end{tikzpicture}
+\end{center}
+\caption{The utility graphs $K_{2,2}$ and $K_{3,3}$}\label{utility_graphs}
+\end{figure}
+% You should be able to easily convince yourself that $K_{2,2}$ can be drawn without edge crossings in the plane. (You could also try to convince yourself that $K_{3,3}$ cannot be drawn without edge crossings in the plane.)
+\begin{question}
+What is the largest utility graph you can draw on the torus without edge crossings?
 \end{question}
 \iffullversion
 \textbf{Solution:\\}
+We can draw $K_{4,4}$ on the torus with edge crossings (see Figures \ref{K44} and \ref{K44:3d}) but not $K_{5,5}$. 
+\begin{figure}[h]
+    \begin{center}
+\input{u2.tikz}
+            \end{center}
+\caption{A drawing of $K_{4,4}$ on a torus (2D-version)}\label{K44}
+        \end{figure}
 
 
+\begin{figure}[h!]
+    \begin{center}
+\input{u3.tikz}
+            \end{center}
+\caption{A drawing of $K_{4,4}$ on a torus (3D-version)}\label{K44:3d}
+        \end{figure}
 
+To understand why we can't draw $K_{5,5}$ on the torus without edge crossings we can use a similar Euler characteristic argument as we gave for $K_8$. 
+
+Suppose we could draw $K_{5,5}$ on the torus without edge crossings. Then $V = 5 + 5 = 10$ and $E = 5 \times 5 = 25$. Any face containing exactly 3 edges is a triangle, but $K_{5,5}$ does not contain any triangles (this is true of all $K_{t,t}$). So every face in a drawing of $K_{5,5}$ must contain at least 4 edges. Hence we have
+the new inequality $F \le 2E/4 = E/2$. So in the case of $K_{5,5}$, $F \le 25/2$. But then
+\[
+V- E + F \le 10 - 25 + \frac{25}{2} = -5/2 <0,
+\] contradicting the Euler characteristic bound (\ref{EC:eq}).
 \fi
 
 \end{document}
