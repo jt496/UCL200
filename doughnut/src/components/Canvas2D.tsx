@@ -326,9 +326,9 @@ export const Canvas2D: React.FC<Canvas2DProps> = ({
         if (from) {
           const isHighlighted = maxClique.size >= 3 && maxClique.has(edge.fromId) && maxClique.has(edge.toId);
           ctx.strokeStyle = isHighlighted ? '#facc15' : '#818cf8';
-          ctx.shadowBlur = isHighlighted ? 25 : 10;
+          ctx.shadowBlur = isHighlighted ? 15 : 6;
           ctx.shadowColor = isHighlighted ? '#f59e0b' : '#4f46e5';
-          ctx.lineWidth = isHighlighted ? 6 : 3;
+          ctx.lineWidth = isHighlighted ? 3 : 1.5;
           drawWrappedLine(ctx, from.x, from.y, from.x + edge.dx, from.y + edge.dy, sw, sh);
         }
       });
@@ -386,12 +386,14 @@ export const Canvas2D: React.FC<Canvas2DProps> = ({
       // Restore from clip for boundaries and global effects
       ctx.restore();
 
-      // Boundaries
-      ctx.lineWidth = 6;
-      ctx.strokeStyle = '#22c55e'; // Green
+      // Boundaries — fine lines with direction arrows indicating torus identification
+      // Boundaries — fine lines, green = left/right, red = top/bottom
+      ctx.lineWidth = 1.5;
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = '#22c55e';
       ctx.beginPath(); ctx.moveTo(toScreenX(0, sw), toScreenY(0, sh)); ctx.lineTo(toScreenX(0, sw), toScreenY(1, sh)); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(toScreenX(1, sw), toScreenY(0, sh)); ctx.lineTo(toScreenX(1, sw), toScreenY(1, sh)); ctx.stroke();
-      ctx.strokeStyle = '#ef4444'; // Red
+      ctx.strokeStyle = '#ef4444';
       ctx.beginPath(); ctx.moveTo(toScreenX(0, sw), toScreenY(0, sh)); ctx.lineTo(toScreenX(1, sw), toScreenY(0, sh)); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(toScreenX(0, sw), toScreenY(1, sh)); ctx.lineTo(toScreenX(1, sw), toScreenY(1, sh)); ctx.stroke();
 

@@ -542,7 +542,7 @@ function App() {
       lines.push(`\\begin{tikzpicture}[scale=6]`);
       lines.push(`  \\draw[gray!40, thin] (0,0) rectangle (1,1);`);
       lines.push(`  \\begin{scope}`);
-      lines.push(`    \\clip (-0.005,-0.005) rectangle (1.005,1.005);`);
+      lines.push(`    \\clip (0,0) rectangle (1,1);`);
       edges.forEach(edge => {
         const from = vertices.find(v => v.id === edge.fromId);
         if (!from) return;
@@ -560,10 +560,10 @@ function App() {
       });
       lines.push(`  \\end{scope}`);
       lines.push(`  % Torus identification borders (green = left/right, red = top/bottom)`);
-      lines.push(`  \\draw[green!70!black, line width=1.5pt] (0,0) -- (0,1);`);
-      lines.push(`  \\draw[green!70!black, line width=1.5pt] (1,0) -- (1,1);`);
-      lines.push(`  \\draw[red, line width=1.5pt] (0,0) -- (1,0);`);
-      lines.push(`  \\draw[red, line width=1.5pt] (0,1) -- (1,1);`);
+      lines.push(`  \\draw[green!70!black, thin] (0,0) -- (0,1);`);
+      lines.push(`  \\draw[green!70!black, thin] (1,0) -- (1,1);`);
+      lines.push(`  \\draw[red, thin] (0,0) -- (1,0);`);
+      lines.push(`  \\draw[red, thin] (0,1) -- (1,1);`);
       vertices.forEach(v => {
         lines.push(`  \\filldraw[fill=violet!60!blue, draw=violet!60!blue] (${v.x.toFixed(4)},${fy(v.y).toFixed(4)}) circle (0.6pt); % ${vLabel.get(v.id)}`);
       });
