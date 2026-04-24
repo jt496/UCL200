@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "tiles": [
+    {
+      "type": "thin",
+      "wx": -75.99061313155919,
+      "wy": 462.6151861095084,
+      "rotation": 0,
+      "reflection": 1,
+      "color": "#d97a4a",
+      "groupId": null
+    },
+    {
+      "type": "thin",
+      "wx": -72.3725791428093,
+      "wy": 462.6151861095084,
+      "rotation": 6,
+      "reflection": 1,
+      "color": "#d97a4a",
+      "groupId": null
+    },
+    {
+      "type": "thin",
+      "wx": -72.3725791428093,
+      "wy": 462.61518610950833,
+      "rotation": 0,
+      "reflection": 1,
+      "color": "#d97a4a",
+      "groupId": null
+    },
+    {
+      "type": "thin",
+      "wx": -68.75454515405941,
+      "wy": 462.61518610950833,
+      "rotation": 6,
+      "reflection": 1,
+      "color": "#d97a4a",
+      "groupId": null
+    }
+  ],
+  "supertileDefs": [],
+  "nextGroupId": 1
+}

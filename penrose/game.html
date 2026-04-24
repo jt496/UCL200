@@ -1,0 +1,2187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Penrose Tile Drop</title>
+<style>
+    :root { --bg:#000000; --side:#0d1520; --accent:#60b8f8; --text:#f0f6ff; --muted:#7a9dc0; --safe-top: env(safe-area-inset-top, 0px); }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { height:100dvh; min-height:100vh; background:var(--bg); color:var(--text);
+           font-family:'Inter',-apple-system,sans-serif; overflow:hidden; }
+    h1  { font-size:1.1rem; font-weight:700; color:var(--accent); }
+    .lbl{ font-size:.68rem; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); font-weight:600; }
+    .val{ font-size:1.5rem; font-weight:700; }
+    hr  { border:none; border-top:1px solid #1e3050; }
+    .keys{ font-size:.75rem; color:var(--muted); line-height:1.75; }
+    .keys kbd{ background:#1a2e48; border-radius:3px; padding:1px 5px; color:var(--text); font-size:.72rem; }
+    #wrap{ position:relative; width:100vw; height:100dvh; min-height:100vh; }
+    canvas#c{ display:block; width:100%; height:100%; touch-action:none; }
+    #topbar{ position:absolute; top:0; left:0; right:0; z-index:10; display:flex; align-items:stretch;
+             justify-content:center; gap:0; padding:calc(14px + var(--safe-top)) 18px 0; pointer-events:none; }
+    .topbar-inner{ width:min(900px, 100%); display:grid; grid-template-columns:repeat(4, minmax(0,1fr)) 72px;
+                   background:linear-gradient(180deg, rgba(10,20,38,.96), rgba(10,20,38,.84));
+                   border:1px solid rgba(96,184,248,.2); border-radius:16px; overflow:hidden;
+                   box-shadow:0 14px 36px rgba(0,0,0,.5); backdrop-filter:blur(8px);
+                   pointer-events:auto; cursor:pointer; }
+    .topbar-stat{ padding:12px 16px; text-align:center; }
+    .topbar-stat + .topbar-stat{ border-left:1px solid rgba(96,184,248,.12); }
+    .topbar-stat .val{ font-size:1.3rem; }
+    .topbar-help{ display:flex; align-items:center; justify-content:center; border-left:1px solid rgba(96,184,248,.12); }
+    .topbar-help-btn{ width:42px; height:42px; border-radius:999px; border:1px solid rgba(96,184,248,.22);
+                      background:rgba(20,40,70,.9); color:var(--text); font-size:1.3rem; font-weight:700; cursor:pointer; }
+    .topbar-help-btn:hover{ background:#1e3a60; }
+    #overlay{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center;
+              justify-content:center; gap:14px; background:rgba(0,0,0,.65); }
+    #overlay h2{ font-size:1.7rem; }
+    #overlay p { color:var(--muted); text-align:center; line-height:1.6; }
+    .big{ font-size:2.2rem; font-weight:700; color:var(--accent); }
+    #overlay button{ padding:11px 30px; background:var(--accent); color:#050e1c;
+                     border:none; border-radius:8px; font-size:1rem; font-weight:700; cursor:pointer; }
+    #overlay button:hover{ background:#8ecffa; }
+    #overlay.hidden{ display:none; }
+    .overlay-controls{ display:flex; flex-direction:column; align-items:center; gap:10px; }
+    #view-board-btn{ background:#1a2e48 !important; color:var(--text) !important;
+                     border:1px solid #2a4468 !important; font-size:.92rem !important;
+                     padding:9px 18px !important; }
+    #view-board-btn:hover{ background:#243d5e !important; }
+    #results-banner{ position:absolute; top:0; left:0; right:0; padding:10px 16px;
+                     background:rgba(6,60,100,.92); color:#c8e8ff;
+                     font-size:.9rem; font-weight:600; text-align:center;
+                     cursor:pointer; z-index:10; letter-spacing:.01em;
+                     backdrop-filter:blur(4px); }
+    #results-banner:hover{ background:rgba(8,80,130,.95); }
+    .overlay-secondary-btn{ padding:9px 18px !important; background:#1a2e48 !important; color:var(--text) !important;
+                            border:1px solid #2a4468 !important; font-size:.92rem !important; }
+    .overlay-secondary-btn:hover{ background:#243d5e !important; }
+    #ov-level{ color:var(--muted); font-size:.9rem; }
+    #pause-overlay{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+                    background:rgba(0,0,0,.55); z-index:15; }
+    #pause-overlay[hidden]{ display:none; }
+    .pause-card{ width:min(100%, 360px); margin:20px; background:rgba(8,18,34,.97); border:1px solid #1e3050;
+                 border-radius:18px; box-shadow:0 24px 60px rgba(0,0,0,.5); padding:22px 20px; text-align:center; }
+    .pause-card h2{ color:var(--text); font-size:1.5rem; }
+    .pause-card p{ color:var(--muted); font-size:.92rem; line-height:1.6; margin-top:10px; }
+    .pause-actions{ display:flex; justify-content:center; gap:12px; margin-top:18px; }
+    .pause-actions .panel-btn{ width:auto; min-width:120px; }
+    #level-flash{ position:absolute; inset:0; z-index:14; display:flex; align-items:center; justify-content:center;
+                  pointer-events:none; opacity:0; transition:opacity .18s ease; }
+    #level-flash.show{ opacity:1; }
+    .level-flash-card{ padding:18px 26px; border-radius:18px; background:rgba(0,0,0,.92);
+                       border:1px solid rgba(96,184,248,.38); box-shadow:0 24px 70px rgba(0,0,0,.5); text-align:center; }
+    .level-flash-title{ color:var(--accent); font-size:1.45rem; font-weight:800; letter-spacing:.02em; }
+    .level-flash-sub{ color:var(--text); font-size:.92rem; margin-top:6px; }
+    #hs-table{ width:100%; max-width:320px; border-collapse:collapse; font-size:.78rem; margin-top:4px; }
+    #hs-table th{ color:var(--muted); font-weight:600; font-size:.65rem; text-transform:uppercase;
+                  letter-spacing:.08em; padding:3px 8px; border-bottom:1px solid #1e3050; text-align:right; }
+    #hs-table th:first-child{ text-align:left; }
+    #hs-table td{ padding:3px 8px; text-align:right; color:var(--text); }
+    #hs-table td:first-child{ text-align:left; color:var(--muted); }
+    #hs-table tr.hs-new td{ color:var(--accent); }
+    #hs-table tr:nth-child(even) td{ background:rgba(255,255,255,.03); }
+    .panel-btn{ width:100%; padding:9px; background:#1a2e48; color:var(--text);
+                border:1px solid #2a4468; border-radius:7px; font-size:.9rem; font-weight:700; cursor:pointer; }
+    .panel-btn:hover{ background:#243d5e; }
+    .sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden;
+              clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+    .modal{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+            background:rgba(0,0,0,.82); padding:20px; z-index:20; }
+    .modal[hidden]{ display:none; }
+    .modal-card{ width:min(100%, 460px); background:#08121e; border:1px solid #1e3050;
+                 border-radius:14px; box-shadow:0 24px 60px rgba(0,0,0,.5); padding:20px; }
+    .modal-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:14px; }
+    .modal-head h2{ font-size:1.2rem; color:var(--accent); }
+    .modal-head p{ color:var(--muted); font-size:.9rem; line-height:1.5; margin-top:4px; }
+    .modal-close{ border:none; background:transparent; color:var(--muted); font-size:1.5rem; cursor:pointer; line-height:1; }
+    .modal-close:hover{ color:var(--text); }
+    .modal-list{ margin-left:18px; color:var(--text); line-height:1.65; font-size:.92rem; }
+    .modal-list strong{ color:var(--accent); }
+    .modal-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:18px; }
+    .modal-select{ width:100%; background:#1a2e48; color:var(--text); border:1px solid #2a4468;
+                   border-radius:7px; padding:10px 12px; font-size:.95rem; margin-top:6px; }
+    .level-grid{ display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:10px; margin-top:14px; }
+    .level-grid-btn{ padding:12px 0; border-radius:10px; border:1px solid #2a4468; background:#1a2e48; color:var(--text);
+                     font-size:1rem; font-weight:700; cursor:pointer; transition:background .12s ease, transform .12s ease, border-color .12s ease; }
+    .level-grid-btn:hover{ background:#243d5e; border-color:#3a5880; transform:translateY(-1px); }
+    .level-grid-btn.locked{ background:#0a1420; color:#2a4060; border-color:#1a2e48; cursor:not-allowed; transform:none; }
+    .level-grid-btn.current{ border-color:var(--accent); box-shadow:0 0 0 1px rgba(96,184,248,.28) inset; }
+    .level-grid-note{ color:var(--muted); font-size:.88rem; line-height:1.5; }
+    .help-section[hidden]{ display:none; }
+    #custom-level-modal label:has(input:checked){ border-color:var(--accent); background:#0d2040; }
+    #builder-overlay{ position:fixed; inset:0; z-index:200; background:#000; display:flex; flex-direction:column; }
+    #builder-overlay[hidden]{ display:none; }
+    #builder-topbar{ display:flex; align-items:center; gap:12px; padding:10px 16px;
+                     background:#0d1520; border-bottom:1px solid #1e3050; flex-shrink:0; }
+    #builder-topbar h2{ flex:1; font-size:1rem; font-weight:700; color:var(--accent); margin:0; }
+    #builder-close{ background:none; border:1px solid #2a4468; border-radius:8px; color:var(--muted);
+                    padding:6px 14px; cursor:pointer; font-size:.9rem; }
+    #builder-close:hover{ color:var(--text); border-color:#3a5880; }
+    #builder-iframe{ flex:1; width:100%; border:none; }
+    @media (max-width: 720px) {
+        #topbar{ padding:calc(8px + var(--safe-top)) 8px 0; }
+        .topbar-inner{ width:100%; border-radius:14px; grid-template-columns:repeat(4, minmax(0,1fr)) 54px; }
+        .topbar-stat{ padding:8px 4px; }
+        .topbar-stat .lbl{ font-size:.66rem; }
+        .topbar-stat .val{ font-size:1.16rem; }
+        .topbar-help-btn{ width:34px; height:34px; font-size:1.05rem; }
+    }
+</style>
+</head>
+<body>
+<div id="wrap">
+    <canvas id="c"></canvas>
+    <div id="topbar">
+        <div class="topbar-inner">
+            <div class="topbar-stat"><div class="lbl">Score</div><div class="val" id="v-score">0</div></div>
+            <div class="topbar-stat"><div class="lbl">Level</div><div class="val" id="v-level">1</div></div>
+            <div class="topbar-stat"><div class="lbl">Goal</div><div class="val" id="v-goal">0/1</div></div>
+            <div class="topbar-stat"><div class="lbl">Best</div><div class="val" id="v-best" style="color:var(--accent)">–</div></div>
+            <div class="topbar-help"><button id="help-trigger-btn" class="topbar-help-btn" type="button" aria-label="Open help">?</button></div>
+        </div>
+    </div>
+    <label for="level-select" class="sr-only">Start Level</label>
+    <input id="level-select" type="number" min="1" step="1" value="1" hidden aria-hidden="true" tabindex="-1">
+    <div id="overlay">
+        <h2 id="ov-title">Penrose Tile Drop</h2>
+        <p id="ov-sub">Tiles fall into the well.<br>Early levels: just fit the shapes.<br>Later levels introduce vertex colours, then arrows.</p>
+        <div class="big" id="ov-score" style="display:none"></div>
+        <table id="hs-table" style="display:none">
+            <thead><tr><th>#</th><th>Score</th><th>Lvl</th><th>Tiles</th><th>Date</th></tr></thead>
+            <tbody id="hs-body"></tbody>
+        </table>
+        <div class="overlay-controls">
+            <div id="ov-level">Start Level: 1</div>
+            <button id="ov-level-btn" class="overlay-secondary-btn" type="button">Choose Start Level</button>
+            <button id="ov-custom-btn" class="overlay-secondary-btn" type="button">Load Custom Level</button>
+            <button id="ov-save-custom-btn" class="overlay-secondary-btn" type="button" hidden>Save Custom Level</button>
+            <input id="custom-level-input" type="file" accept=".json" style="display:none">
+            <button id="view-board-btn" class="overlay-secondary-btn" type="button" hidden>View Board</button>
+            <button id="ov-btn">Start Game</button>
+        </div>
+    </div>
+    <div id="results-banner" hidden>Tap here to return to Results</div>
+    <div id="pause-overlay" hidden>
+        <div class="pause-card">
+            <h2>Paused</h2>
+            <!-- <p>Tap the top bar or press <kbd>P</kbd> to resume.<br>Start a fresh run at any time from here.</p> -->
+            <div class="pause-actions">
+                <button id="pause-resume-btn" class="panel-btn" type="button">Resume</button>
+                <button id="pause-save-custom-btn" class="panel-btn" type="button" hidden style="border-color:#34d399;color:#6ee7b7;">Save Custom Level</button>
+                <button id="pause-newgame-btn" class="panel-btn" type="button" style="background:var(--accent);color:#0f172a;border:none;">Quit</button>
+            </div>
+        </div>
+    </div>
+    <div id="level-flash" aria-hidden="true">
+        <div class="level-flash-card">
+            <div id="level-flash-title" class="level-flash-title">Level Cleared</div>
+            <div id="level-flash-sub" class="level-flash-sub"></div>
+        </div>
+    </div>
+</div>
+
+<div id="help-modal" class="modal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="help-title">
+        <div class="modal-head">
+            <div>
+                <h2 id="help-title">How to Play</h2>
+                <p>Penrose pieces fall into the well. Early levels are about shape matching, then vertex colours and arrows matter too.</p>
+            </div>
+            <button id="help-close" class="modal-close" type="button" aria-label="Close controls modal">×</button>
+        </div>
+        <div id="help-desktop" class="help-section" hidden>
+            <ul class="modal-list">
+                <li><strong>Move</strong> with <kbd>Left</kbd> and <kbd>Right</kbd>.</li>
+                <li><strong>Rotate CCW</strong> with <kbd>Z</kbd> or <kbd>Up</kbd>.</li>
+                <li><strong>Rotate CW</strong> with <kbd>X</kbd>.</li>
+                <li><strong>Soft drop</strong> with <kbd>Down</kbd>.</li>
+                <li><strong>Auto drop</strong> happens when a snap preview stays visible for 0.5 seconds.</li>
+                <li><strong>Pause</strong> with <kbd>P</kbd> or by clicking the top bar.</li>
+                <li><strong>Goal</strong> is shown in the top bar as completed vertices versus the current level target.</li>
+            </ul>
+        </div>
+        <div id="help-phone" class="help-section" hidden>
+            <ul class="modal-list">
+                <li><strong>Move</strong> by dragging sideways.</li>
+                <li><strong>Rotate CW</strong> by tapping the left half of the screen.</li>
+                <li><strong>Rotate CCW</strong> by tapping the right half of the screen.</li>
+                <li><strong>Soft drop</strong> by dragging downward.</li>
+                <li><strong>Auto drop</strong> happens when a snap preview stays visible for 0.5 seconds.</li>
+                <li><strong>Pause</strong> by tapping the top bar.</li>
+                <li><strong>Goal</strong> is shown in the top bar as completed vertices versus the current level target.</li>
+            </ul>
+        </div>
+        <div class="modal-actions">
+            <button id="help-ok" class="panel-btn" type="button" style="width:auto;padding:9px 16px;">Close</button>
+        </div>
+    </div>
+</div>
+
+<div id="level-modal" class="modal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="level-title">
+        <div class="modal-head">
+            <div>
+                <h2 id="level-title">Start Level</h2>
+            </div>
+            <button id="level-close" class="modal-close" type="button" aria-label="Close level picker">×</button>
+        </div>
+        <div id="level-grid" class="level-grid" role="group" aria-label="Choose start level"></div>
+        <div class="modal-actions">
+            <button id="level-cancel" class="panel-btn" type="button" style="width:auto;padding:9px 16px;">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<div id="save-filename-modal" class="modal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="save-filename-title" style="width:min(100%,360px)">
+        <div class="modal-head">
+            <div><h2 id="save-filename-title">Save Custom Level</h2></div>
+            <button id="save-filename-close" class="modal-close" type="button" aria-label="Close">×</button>
+        </div>
+        <form id="save-filename-form">
+            <input id="save-filename-input" type="text" value="custom_level"
+                   style="width:100%;background:#1a2e48;color:var(--text);border:1px solid #2a4468;
+                          border-radius:7px;padding:9px 12px;font-size:.95rem;margin-bottom:14px;"
+                   autocomplete="off" spellcheck="false">
+            <div class="modal-actions">
+                <button id="save-filename-cancel" class="panel-btn" type="button" style="width:auto;padding:9px 16px;">Cancel</button>
+                <button class="panel-btn" type="submit" style="width:auto;padding:9px 16px;background:var(--accent);color:#0f172a;border:none;">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="custom-level-modal" class="modal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="custom-level-title">
+        <div class="modal-head">
+            <div>
+                <h2 id="custom-level-title">Custom Level</h2>
+                <p>Choose the matching rules for this level.</p>
+            </div>
+            <button id="custom-level-close" class="modal-close" type="button" aria-label="Close">×</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px;">
+            <label id="custom-rule-0" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;border:1px solid #2a4468;cursor:pointer;background:#1a2e48;">
+                <input type="radio" name="custom-rule" value="0" checked style="accent-color:var(--accent);">
+                <div><strong style="color:var(--text);">Shapes only</strong><div style="font-size:.8rem;color:var(--muted);">Tiles just need to fit together geometrically</div></div>
+            </label>
+            <label id="custom-rule-1" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;border:1px solid #2a4468;cursor:pointer;background:#1a2e48;">
+                <input type="radio" name="custom-rule" value="1" style="accent-color:var(--accent);">
+                <div><strong style="color:var(--text);">Vertex colours</strong><div style="font-size:.8rem;color:var(--muted);">Shared vertices must have matching colours</div></div>
+            </label>
+            <label id="custom-rule-2" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;border:1px solid #2a4468;cursor:pointer;background:#1a2e48;">
+                <input type="radio" name="custom-rule" value="2" style="accent-color:var(--accent);">
+                <div><strong style="color:var(--text);">Full Penrose rules</strong><div style="font-size:.8rem;color:var(--muted);">Colours and edge arrows must match</div></div>
+            </label>
+        </div>
+        <div class="modal-actions">
+            <button id="custom-level-save" class="panel-btn" type="button" style="width:auto;padding:9px 16px;border-color:#34d399;color:#6ee7b7;">Save as JSON</button>
+            <button id="custom-level-start" class="panel-btn" type="button" style="width:auto;padding:9px 16px;background:var(--accent);color:#0f172a;border:none;">Start</button>
+        </div>
+    </div>
+</div>
+
+<div id="builder-overlay" hidden>
+    <div id="builder-topbar">
+        <h2>Level Builder</h2>
+        <span style="font-size:.82rem;color:var(--muted);">Design a ground configuration, then click <strong style="color:#fde68a;">▶ Use as Game Level</strong> in the sidebar.</span>
+        <button id="builder-close" type="button">✕ Close</button>
+    </div>
+    <iframe id="builder-iframe" src="penrose.html" title="Level Builder"></iframe>
+</div>
+
+<script>
+// ── Constants ────────────────────────────────────────────────────────────────
+const PHI = (1 + Math.sqrt(5)) / 2;
+const BS  = 80; // pixels per world unit at zoom 1
+const a36 = Math.PI / 5;
+const a72 = 2 * Math.PI / 5;
+
+const THICK_V      = [[0,0],[1,0],[1+Math.cos(a72),-Math.sin(a72)],[Math.cos(a72),-Math.sin(a72)]];
+const THIN_V       = [[0,0],[1,0],[1+Math.cos(a36),-Math.sin(a36)],[Math.cos(a36),-Math.sin(a36)]];
+const THICK_HALF_V = [[0,0],[1,0],[1+Math.cos(a72),-Math.sin(a72)]];
+const THIN_HALF_V  = [[0,0],[1,0],[Math.cos(a36),-Math.sin(a36)]];
+
+// ── Pentagon-level tile shapes ────────────────────────────────────────────────
+// Kite (Penrose P2): two golden triangles joined long-edge to long-edge.
+//   Angles: head 72°, upper-wing 72°, tail 144°, lower-wing 72°.
+//   Long sides = PHI, short sides = 1.
+const KITE_V = [
+    [0, 0],
+    [PHI * Math.cos(a36), -PHI * Math.sin(a36)],
+    [PHI, 0],
+    [PHI * Math.cos(a36),  PHI * Math.sin(a36)],
+];
+
+// Dart (Penrose P2): two golden gnomons joined short-edge to short-edge.
+//   Angles: notch 216° (reflex), upper-wing 36°, tip 72°, lower-wing 36°.
+//   Long sides = PHI, short sides = 1.  Concave at v0.
+const DART_V = [
+    [0, 0],
+    [Math.cos(a72), -Math.sin(a72)],
+    [-1, 0],
+    [Math.cos(a72),  Math.sin(a72)],
+];
+
+// Regular pentagon with unit sides, flat bottom, bottom-left vertex at origin.
+//   All interior angles = 108°.
+const PENT_V = [
+    [0, 0],
+    [1, 0],
+    [1 + Math.cos(a72), -Math.sin(a72)],
+    [0.5,               -(Math.sin(a72) + Math.sin(a36))],
+    [-Math.cos(a72),    -Math.sin(a72)],
+];
+
+const TILE_VERTS = {
+    thick: THICK_V, thin: THIN_V,
+    'thick-half': THICK_HALF_V, 'thin-half': THIN_HALF_V,
+    kite: KITE_V, dart: DART_V, pent: PENT_V,
+};
+
+const VCOL = {
+    thick:       ['green','green','purple','green'],
+    thin:        ['green','green','green','purple'],
+    'thick-half':['green','green','purple'],
+    'thin-half': ['green','green','purple'],
+    // Kite: head(72°)=green, wings(72°)=purple, tail(144°)=green — classic P2 colouring
+    kite:        ['green','purple','green','purple'],
+    // Dart: notch(216°)=purple, wings(36°)=green, tip(72°)=purple — dual of kite
+    dart:        ['purple','green','purple','green'],
+    // Pentagon: all green — no canonical Penrose matching, no colour constraint
+    pent:        ['green','green','green','green','green'],
+};
+const EARR = {
+    thick:       [-1, 0, 0, +1],
+    thin:        [-1,+1, 0,  0],
+    'thick-half':[-1, 0, 0],
+    'thin-half': [-1, 0, 0],
+    kite:        [ 0, 0, 0,  0],
+    dart:        [ 0, 0, 0,  0],
+    pent:        [ 0, 0, 0,  0,  0],
+};
+const TCOL = {
+    thick:'#4a90d9', thin:'#d97a4a',
+    'thick-half':'#6ab0ff', 'thin-half':'#ffaa6a',
+    kite:'#a78bfa', dart:'#fb923c', pent:'#34d399',
+};
+
+// Play area (world units)
+const PLAY_W      = 8;
+const PLAY_H      = 14;
+const PLAY_LEFT   = -PLAY_W / 2;   // -4
+const PLAY_RIGHT  =  PLAY_W / 2;   //  4
+const PLAY_BOTTOM =  6;            // floor
+const PLAY_TOP    =  PLAY_BOTTOM - PLAY_H;  // -8
+const SEED_WY     =  PLAY_BOTTOM;           // seed sits on the floor
+const SPAWN_WY    =  PLAY_TOP    + 0.5;     // spawn just inside top
+
+const SNAP_X_RADIUS   = 1.5;   // world units — horizontal search window for landing
+const SNAP_ALIGN_TOL  = 0.13;  // max X offset between tile and snap to allow locking
+const MOVE_SPEED      = 2.0;   // world units / second (horizontal key hold)
+const LOCK_DELAY_MS        = 700;  // ms the tile slows near a snap Y while player aligns X
+const LOCK_DELAY_MAX_MOVES = 15;   // max horizontal resets before delay expires anyway
+const LOCK_DELAY_X_TOL     = 0.4;  // only trigger delay when snap is this close in X
+const LOCK_DELAY_SLOW      = 0.08; // speed multiplier while lock-delay is active
+const HARD_DROP_SPEED = 12.0;  // world units / second during accelerated hard drop
+const AUTO_DROP_PREVIEW_MS = 500;
+const CLEAR_HIGHLIGHT_MS = 1000;
+const MAX_LEVEL       = 9;
+const LEVEL_PICKER_MAX = 20;
+const TOUCH_TAP_MAX_MS = 180;
+
+function fallSpeed(cycle) { return 0.5 * (2 ** cycle); }
+function levelCycle(lvl) { return Math.floor((lvl - 1) / MAX_LEVEL); }
+function stageLevel(lvl) { return ((lvl - 1) % MAX_LEVEL) + 1; }
+function levelGoal(lvl) { return lvl; }
+
+// ── Geometry ─────────────────────────────────────────────────────────────────
+function getVerts(wx, wy, rot, refl, type) {
+    const tmpl = TILE_VERTS[type];
+    const θ = rot * a36, cos = Math.cos(θ), sin = Math.sin(θ);
+    return tmpl.map(([tx, ty]) => {
+        const ry = ty * refl;
+        return { x: tx*cos - ry*sin + wx, y: tx*sin + ry*cos + wy };
+    });
+}
+
+function dist2(a, b) { return (a.x-b.x)**2 + (a.y-b.y)**2; }
+
+function worldContains(vs, px, py) {
+    let inside = false;
+    for (let i = 0, j = vs.length-1; i < vs.length; j = i++) {
+        const {x:xi,y:yi}=vs[i], {x:xj,y:yj}=vs[j];
+        if (((yi>py)!==(yj>py)) && (px<(xj-xi)*(py-yi)/(yj-yi)+xi)) inside=!inside;
+    }
+    return inside;
+}
+
+function distSeg(px,py,ax,ay,bx,by) {
+    const dx=bx-ax, dy=by-ay, l2=dx*dx+dy*dy;
+    if (l2<1e-10) return Math.hypot(px-ax, py-ay);
+    const t=Math.max(0, Math.min(1, ((px-ax)*dx+(py-ay)*dy)/l2));
+    return Math.hypot(px-(ax+t*dx), py-(ay+t*dy));
+}
+
+function nearEdge(p, vs, tol) {
+    for (let i=0; i<vs.length; i++) {
+        const a=vs[i], b=vs[(i+1)%vs.length];
+        if (distSeg(p.x,p.y,a.x,a.y,b.x,b.y) < tol) return true;
+    }
+    return false;
+}
+
+function segIntersect(x1,y1,x2,y2,x3,y3,x4,y4) {
+    const det=(x2-x1)*(y4-y3)-(y2-y1)*(x4-x3);
+    if (Math.abs(det)<1e-10) return false;
+    const λ=((x3-x1)*(y4-y3)-(y3-y1)*(x4-x3))/det;
+    const γ=((x3-x1)*(y2-y1)-(y3-y1)*(x2-x1))/det;
+    return 0.001<λ && λ<0.999 && 0.001<γ && γ<0.999;
+}
+
+function overlaps(v1, v2) {
+    const tol = 0.012; // matches sharesVertex/sharesEdge tolerance; half-tiles accumulate more fp error
+    for (const p of v1) if (!nearEdge(p,v2,tol) && worldContains(v2,p.x,p.y)) return true;
+    for (const p of v2) if (!nearEdge(p,v1,tol) && worldContains(v1,p.x,p.y)) return true;
+    // Edge-crossing: catches overlaps where no vertex is inside the other polygon
+    const n1=v1.length, n2=v2.length;
+    for (let i=0;i<n1;i++) { const a=v1[i],b=v1[(i+1)%n1];
+        for (let j=0;j<n2;j++) { const c=v2[j],d=v2[(j+1)%n2];
+            if (segIntersect(a.x,a.y,b.x,b.y,c.x,c.y,d.x,d.y)) return true; } }
+    // Vertex-on-edge-interior: a vertex of one polygon lies on a non-terminal point of
+    // an edge of the other (not at a shared vertex). This catches the degenerate case
+    // where tiles massively overlap but all evidence is exactly on polygon boundaries.
+    const nearVert = (p, vs) => vs.some(q => Math.hypot(p.x-q.x, p.y-q.y) < tol);
+    for (const p of v2) if (!nearVert(p,v1) && nearEdge(p,v1,tol)) return true;
+    for (const p of v1) if (!nearVert(p,v2) && nearEdge(p,v2,tol)) return true;
+    return false;
+}
+
+// Returns the matching rule mode for a given level:
+//   0 = shapes only (no vertex colour or arrow constraints)
+//   1 = vertex colours only (no arrow constraints)
+//   2 = full Penrose rules (colours + arrows)
+function levelMode(lvl) {
+    if (customGroundTiles !== null) return customLevelMode;
+    const stage = stageLevel(lvl);
+    if (stage <= 3) return 0;
+    if (stage <= 5) return 1;
+    return 2;
+}
+
+function matchingOk(v1, t1, v2, t2) {
+    const mode = levelMode(level);
+    if (mode === 0) return true;
+    const TOL2=0.012**2, n1=v1.length, n2=v2.length;
+    for (let i=0; i<n1; i++) for (let j=0; j<n2; j++)
+        if (dist2(v1[i],v2[j])<TOL2 && VCOL[t1][i]!==VCOL[t2][j]) return false;
+    if (mode === 1) return true;
+    for (let e1=0; e1<n1; e1++) {
+        const a1=v1[e1], b1=v1[(e1+1)%n1];
+        for (let e2=0; e2<n2; e2++) {
+            const a2=v2[e2], b2=v2[(e2+1)%n2];
+            if (dist2(a1,b2)<TOL2 && dist2(b1,a2)<TOL2) {
+                const ar1=EARR[t1][e1], ar2=EARR[t2][e2];
+                if ((ar1!==0||ar2!==0) && ar1!==(-ar2)) return false;
+            }
+            if (dist2(a1,a2)<TOL2 && dist2(b1,b2)<TOL2) {
+                const ar1=EARR[t1][e1], ar2=EARR[t2][e2];
+                if ((ar1!==0||ar2!==0) && ar1!==ar2) return false;
+            }
+        }
+    }
+    return true;
+}
+
+function sharesEdge(v1, v2) {
+    const TOL2=0.012**2, n1=v1.length, n2=v2.length;
+    for (let e1=0; e1<n1; e1++) {
+        const a1=v1[e1], b1=v1[(e1+1)%n1];
+        for (let e2=0; e2<n2; e2++) {
+            const a2=v2[e2], b2=v2[(e2+1)%n2];
+            if ((dist2(a1,b2)<TOL2&&dist2(b1,a2)<TOL2)||(dist2(a1,a2)<TOL2&&dist2(b1,b2)<TOL2)) return true;
+        }
+    }
+    return false;
+}
+
+function sharesVertex(v1, v2) {
+    const TOL2=0.012**2;
+    for (const a of v1) for (const b of v2) if (dist2(a,b)<TOL2) return true;
+    return false;
+}
+
+// Enumerate all edge-to-edge and vertex-to-vertex snap positions for a falling tile.
+function snapCandidates(type, rot, refl) {
+    const tmpl = TILE_VERTS[type];
+    const θ=rot*a36, cos=Math.cos(θ), sin=Math.sin(θ), n1=tmpl.length;
+    const results=[];
+    // Rotated vertices of the template (offset from origin)
+    const rv = tmpl.map(([px,py]) => ({
+        x: px*cos - py*refl*sin,
+        y: px*sin + py*refl*cos,
+    }));
+    for (const t of tiles) {
+        const tv=getVerts(t.wx,t.wy,t.rot,t.refl,t.type), n2=tv.length;
+        // Edge-to-edge
+        for (let e2=0; e2<n2; e2++) {
+            const a2=tv[e2], b2=tv[(e2+1)%n2];
+            const len2=Math.hypot(b2.x-a2.x, b2.y-a2.y);
+            for (let e1=0; e1<n1; e1++) {
+                const r1=rv[e1], r2=rv[(e1+1)%n1];
+                if (Math.abs(Math.hypot(r2.x-r1.x,r2.y-r1.y)-len2)>0.015) continue;
+                results.push({ wx:b2.x-r1.x, wy:b2.y-r1.y });
+                results.push({ wx:a2.x-r1.x, wy:a2.y-r1.y });
+            }
+        }
+        // Vertex-to-vertex
+        for (let vi2=0; vi2<n2; vi2++) {
+            const p2=tv[vi2];
+            for (let vi1=0; vi1<n1; vi1++) {
+                const r1=rv[vi1];
+                results.push({ wx:p2.x-r1.x, wy:p2.y-r1.y });
+            }
+        }
+    }
+    return results;
+}
+
+// Validate a candidate snap position.
+function validSnap(wx, wy, type, rot, refl) {
+    const gv = getVerts(wx, wy, rot, refl, type);
+    // Every vertex must lie within the play area (small tolerance for floating-point error
+    // so vertices that should land exactly on the boundary are not incorrectly rejected).
+    const BTOL = 1e-6;
+    for (const v of gv)
+        if (v.x < PLAY_LEFT-BTOL || v.x > PLAY_RIGHT+BTOL || v.y < PLAY_TOP-BTOL || v.y > PLAY_BOTTOM+BTOL) return false;
+    let adj = false;
+    for (const t of tiles) {
+        const tv = getVerts(t.wx,t.wy,t.rot,t.refl,t.type);
+        if (overlaps(gv, tv))               return false;
+        if (!matchingOk(gv,type,tv,t.type)) return false;
+        if (sharesEdge(gv,tv) || sharesVertex(gv,tv)) adj = true;
+    }
+    return adj;
+}
+
+// Returns true if the ghost at (wx, wy) shares at least one full edge with any placed tile.
+function snapIsEdge(wx, wy, type, rot, refl) {
+    const gv = getVerts(wx, wy, rot, refl, type);
+    return tiles.some(t => sharesEdge(gv, getVerts(t.wx, t.wy, t.rot, t.refl, t.type)));
+}
+
+// Shallowest valid snap at or below minWy, within xRadius of targetWx.
+function findLanding(type, rot, refl, targetWx, minWy, xRadius = SNAP_X_RADIUS) {
+    const cands = snapCandidates(type, rot, refl);
+    let best = null;
+    for (const {wx, wy} of cands) {
+        if (wy < (minWy ?? -Infinity) - 0.25) continue; // already passed (allow small overshoot)
+        if (Math.abs(wx - targetWx) > xRadius) continue;
+        if (best && wy >= best.wy) continue;
+        if (validSnap(wx, wy, type, rot, refl)) best = {wx, wy};
+    }
+    return best;
+}
+
+// Does placing the falling tile at (wx,wy) overlap any tile?
+function wouldOverlap(wx, wy) {
+    const gv = getVerts(wx, wy, ghost.rot, ghost.refl, ghost.type);
+    return tiles.some(t => overlaps(gv, getVerts(t.wx,t.wy,t.rot,t.refl,t.type)));
+}
+
+
+function debugLanding() {
+    const {type, rot, refl, wx} = ghost;
+    const wy = fallingWy;
+    console.group(`DEBUG D — ghost ${type} rot=${rot} refl=${refl} wx=${wx.toFixed(3)} fallingWy=${wy.toFixed(3)}`);
+    console.log('landing:', landing, '  previewLanding:', previewLanding);
+    console.log('ghost verts:', getVerts(wx, wy, rot, refl, type));
+    console.log('placed tiles:', tiles.map(t => ({...t})));
+
+    const cands = snapCandidates(type, rot, refl);
+    console.log(`snapCandidates: ${cands.length} total`);
+
+    const BTOL = 1e-6;
+    for (const c of cands) {
+        const dX = Math.abs(c.wx - wx);
+        if (dX > SNAP_X_RADIUS) { console.log(`  SKIP  wx=${c.wx.toFixed(3)} wy=${c.wy.toFixed(3)} — dX=${dX.toFixed(3)} > SNAP_X_RADIUS(${SNAP_X_RADIUS})`); continue; }
+        if (c.wy < wy - 1e-4)   { console.log(`  SKIP  wx=${c.wx.toFixed(3)} wy=${c.wy.toFixed(3)} — above fallingWy`); continue; }
+
+        const gv = getVerts(c.wx, c.wy, rot, refl, type);
+        const oob = gv.find(v => v.x < PLAY_LEFT-BTOL || v.x > PLAY_RIGHT+BTOL || v.y < PLAY_TOP-BTOL || v.y > PLAY_BOTTOM+BTOL);
+        if (oob) { console.log(`  FAIL  wx=${c.wx.toFixed(3)} wy=${c.wy.toFixed(3)} — out of bounds`, oob); continue; }
+
+        let failReason = null;
+        let adj = false;
+        for (const t of tiles) {
+            const tv = getVerts(t.wx, t.wy, t.rot, t.refl, t.type);
+            if (overlaps(gv, tv))               { failReason = `overlaps tile (${t.wx.toFixed(2)},${t.wy.toFixed(2)})`; break; }
+            if (!matchingOk(gv,type,tv,t.type)) { failReason = `matchingOk failed vs tile (${t.wx.toFixed(2)},${t.wy.toFixed(2)})`; break; }
+            if (sharesEdge(gv,tv) || sharesVertex(gv,tv)) adj = true;
+        }
+        if (failReason) { console.log(`  FAIL  wx=${c.wx.toFixed(3)} wy=${c.wy.toFixed(3)} — ${failReason}`); continue; }
+        if (!adj)       { console.log(`  FAIL  wx=${c.wx.toFixed(3)} wy=${c.wy.toFixed(3)} — not adjacent to any placed tile`); continue; }
+        const snapV = getVerts(c.wx, c.wy, rot, refl, type);
+        const vStr = snapV.map(v=>`(${v.x.toFixed(3)},${v.y.toFixed(3)})`).join(' ');
+        console.log(`  VALID wx=${c.wx.toFixed(3)} wy=${c.wy.toFixed(3)} — verts: ${vStr}`);
+    }
+    console.groupEnd();
+}
+
+// ── Ground configs ────────────────────────────────────────────────────────────
+// Interior angle (degrees) at each vertex index for each tile type.
+// thick rhombus: v0,v2 = 72°;  v1,v3 = 108°
+// thin  rhombus: v0,v2 = 36°;  v1,v3 = 144°
+const VERT_DEG = {
+    thick:        [ 72, 108,  72, 108],
+    thin:         [ 36, 144,  36, 144],
+    'thick-half': [ 36, 108,  36],
+    'thin-half':  [ 36,  72,  72],
+    kite:         [ 72,  72, 144,  72],
+    dart:         [216,  36,  72,  36],
+    pent:         [108, 108, 108, 108, 108],
+};
+
+// Ground tile sets — raw tile descriptors (coordinates are relative to each other;
+// loadGroundConfig() will normalise them into the play area).
+const GROUND_DATA = [
+    // ground1: 4 thin rhombi in a row
+    [
+        { type:'thin', wx:-75.99061313155919, wy:462.6151861095084,  rotation:0, reflection:1 },
+        { type:'thin', wx:-72.3725791428093,  wy:462.6151861095084,  rotation:6, reflection:1 },
+        { type:'thin', wx:-72.3725791428093,  wy:462.61518610950833, rotation:0, reflection:1 },
+        { type:'thin', wx:-68.75454515405941, wy:462.61518610950833, rotation:6, reflection:1 },
+    ],
+    // ground2: 6 thick rhombi (3 pairs)
+    [
+        { type:'thick', wx:-70.03312984402775, wy:464.98731348131565, rotation:0, reflection:1 },
+        { type:'thick', wx:-70.03312984402775, wy:464.9873134813157,  rotation:7, reflection:1 },
+        { type:'thick', wx:-72.65116383277764, wy:464.98731348131565, rotation:0, reflection:1 },
+        { type:'thick', wx:-72.65116383277764, wy:464.98731348131565, rotation:7, reflection:1 },
+        { type:'thick', wx:-75.26919782152753, wy:464.98731348131565, rotation:0, reflection:1 },
+        { type:'thick', wx:-75.26919782152753, wy:464.98731348131565, rotation:8, reflection:1 },
+    ],
+    // ground3: 6 thick rhombi in alternating orientations
+    [
+        { type:'thick', wx:-74.54251547519868, wy:462.29469536715874, rotation:8, reflection:1 },
+        { type:'thick', wx:-73.9244814864488,  wy:462.29469536715874, rotation:9, reflection:1 },
+        { type:'thick', wx:-72.30644749769891, wy:462.29469536715874, rotation:8, reflection:1 },
+        { type:'thick', wx:-71.68841350894903, wy:462.29469536715874, rotation:9, reflection:1 },
+        { type:'thick', wx:-70.07037952019914, wy:462.2946953671587,  rotation:8, reflection:1 },
+        { type:'thick', wx:-76.16054946394857, wy:462.29469536715874, rotation:9, reflection:1 },
+    ],
+    // ground4: supertile mix (from ground4.json)
+    [
+        { type:'thick',      wx:-4.384607151191294,  wy:1.2109874950209454,  rotation:9, reflection: 1 },
+        { type:'thin-half',  wx:-4.384607151191294,  wy:1.2109874950209454,  rotation:9, reflection:-1 },
+        { type:'thick-half', wx:-4.6936241455662415, wy:2.162044011316099,   rotation:8, reflection:-1 },
+        { type:'thick-half', wx:-4.6936241455662415, wy:2.162044011316099,   rotation:8, reflection: 1 },
+        { type:'thin-half',  wx:-4.384607151191294,  wy:1.2109874950209454,  rotation:7, reflection: 1 },
+        { type:'thick',      wx:-2.5755901568163466, wy:0.6232022427284716,  rotation:3, reflection: 1 },
+        { type:'thin-half',  wx:-2.5755901568163466, wy:0.6232022427284716,  rotation:3, reflection:-1 },
+        { type:'thick-half', wx:-2.884607151191296,  wy:-0.3278542735666816, rotation:2, reflection:-1 },
+        { type:'thick-half', wx:-2.884607151191296,  wy:-0.3278542735666816, rotation:2, reflection: 1 },
+        { type:'thin-half',  wx:-2.5755901568163466, wy:0.6232022427284716,  rotation:1, reflection: 1 },
+        { type:'thick-half', wx:-0.2665731624414012, wy:1.5742587590236237,  rotation:5, reflection:-1 },
+        { type:'thin-half',  wx:-0.2665731624414012, wy:1.5742587590236237,  rotation:5, reflection: 1 },
+        { type:'thin-half',  wx:-0.2665731624414012, wy:1.5742587590236237,  rotation:3, reflection:-1 },
+        { type:'thick-half', wx:-0.2665731624414012, wy:1.5742587590236237,  rotation:3, reflection: 1 },
+        { type:'thick-half', wx:-6.502641139941188,  wy:1.5742587590236257,  rotation:2, reflection:-1 },
+        { type:'thin-half',  wx:-6.502641139941188,  wy:1.5742587590236257,  rotation:2, reflection: 1 },
+        { type:'thin-half',  wx:-6.502641139941188,  wy:1.5742587590236257,  rotation:0, reflection:-1 },
+        { type:'thick-half', wx:-6.502641139941188,  wy:1.5742587590236257,  rotation:0, reflection: 1 },
+    ],
+    // ground5 (pentagon level): 5 kites with heads meeting at centre — forms a regular pentagon.
+    // The 5 × 72° head angles fill exactly 360°, so they tile gap-free around the centre.
+    [
+        { type:'kite', wx:0, wy:0, rotation:0, reflection:1 },
+        { type:'kite', wx:0, wy:0, rotation:2, reflection:1 },
+        { type:'kite', wx:0, wy:0, rotation:4, reflection:1 },
+        { type:'kite', wx:0, wy:0, rotation:6, reflection:1 },
+        { type:'kite', wx:0, wy:0, rotation:8, reflection:1 },
+    ],
+    // ground6 (l83.json): 4 pairs of thick rhombi — level 8 ground
+    [
+        { type:'thick', wx: 0.5639055366708017,  wy: -0.07666315180667169, rotation:0, reflection:1 },
+        { type:'thick', wx: 0.5639055366708021,  wy: -0.07666315180667171, rotation:8, reflection:1 },
+        { type:'thick', wx:-1.2451114577041456,  wy: -0.6644484040991443,  rotation:0, reflection:1 },
+        { type:'thick', wx:-1.2451114577041458,  wy: -0.664448404099145,   rotation:8, reflection:1 },
+        { type:'thick', wx: 2.3729225310457487,  wy:  0.5111221004858011,  rotation:8, reflection:1 },
+        { type:'thick', wx: 2.3729225310457482,  wy:  0.5111221004858006,  rotation:0, reflection:1 },
+        { type:'thick', wx: 4.181939525420696,   wy:  1.0989073527782733,  rotation:8, reflection:1 },
+        { type:'thick', wx: 4.181939525420696,   wy:  1.098907352778273,   rotation:0, reflection:1 },
+    ],
+];
+
+// Supertile definitions for level 4 drops.
+// Each supertile is a group of tiles relative to a common anchor (relWx/relWy offsets).
+const SUPERTILE_DEFS = [
+    {
+        name: 'T2',
+        tiles: [
+            { type:'thick',      rot:9, refl: 1, relWx: 0,                   relWy: 0 },
+            { type:'thin-half',  rot:9, refl:-1, relWx: 0,                   relWy: 0 },
+            { type:'thick-half', rot:8, refl:-1, relWx:-0.30901699437494745, relWy: 0.9510565162951536 },
+            { type:'thick-half', rot:8, refl: 1, relWx:-0.30901699437494745, relWy: 0.9510565162951536 },
+            { type:'thin-half',  rot:7, refl: 1, relWx: 0,                   relWy: 0 },
+        ],
+    },
+    {
+        name: 't2',
+        tiles: [
+            { type:'thick-half', rot:3, refl:-1, relWx: 0, relWy: 0 },
+            { type:'thin-half',  rot:3, refl: 1, relWx: 0, relWy: 0 },
+            { type:'thin-half',  rot:1, refl:-1, relWx: 0, relWy: 0 },
+            { type:'thick-half', rot:1, refl: 1, relWx: 0, relWy: 0 },
+        ],
+    },
+];
+
+function groundIndex(lvl) {
+    const stage = stageLevel(lvl);
+    if (stage === 1) return 4;            // pentagon (5 kites) — GROUND_DATA[4]
+    if (stage <= 5) return (stage-2) % 2; // thin/thick rhombi alternating (levels 2-5)
+    if (stage === 8) return 5;            // l83.json — 4 pairs of thick rhombi
+    return (stage - 6) % 4;               // 0,1,2,3 for levels 6-9
+}
+
+function loadGroundConfig(level) {
+    const raw = GROUND_DATA[groundIndex(level)];
+
+    // Find bounding box of all actual vertex positions.
+    let minX=Infinity, maxX=-Infinity, maxY=-Infinity;
+    for (const t of raw) {
+        for (const v of getVerts(t.wx, t.wy, t.rotation, t.reflection, t.type)) {
+            if (v.x < minX) minX = v.x;
+            if (v.x > maxX) maxX = v.x;
+            if (v.y > maxY) maxY = v.y;
+        }
+    }
+    // Translate: centre horizontally, bottom of config at PLAY_BOTTOM.
+    const dx = -((minX + maxX) / 2);
+    const dy = PLAY_BOTTOM - maxY;
+    return raw
+        .map(t => ({ ...t, wx: t.wx + dx, wy: t.wy + dy, rot: t.rotation, refl: t.reflection, fixed: true, id: nextTileId++ }))
+        .filter(t => tileInsidePlayArea(t));
+}
+
+// Returns true if every vertex of the tile is inside (or on the boundary of) the play area.
+function tileInsidePlayArea(t) {
+    const tol = 1e-6;
+    for (const v of getVerts(t.wx, t.wy, t.rot, t.refl, t.type)) {
+        if (v.x < PLAY_LEFT - tol || v.x > PLAY_RIGHT + tol ||
+            v.y < PLAY_TOP  - tol || v.y > PLAY_BOTTOM + tol) return false;
+    }
+    return true;
+}
+
+// ── Vertex-completion clear ────────────────────────────────────────────────────
+// After every placement, find any vertex that is fully surrounded (angles sum to 360°)
+// and return all tiles that should clear. The caller can then animate before removal.
+function sameVertex(a, b, tol2 = 0.02 ** 2) {
+    return dist2(a, b) < tol2;
+}
+
+function sameEdge(a1, b1, a2, b2, tol2 = 0.02 ** 2) {
+    return (sameVertex(a1, a2, tol2) && sameVertex(b1, b2, tol2))
+        || (sameVertex(a1, b2, tol2) && sameVertex(b1, a2, tol2));
+}
+
+function collectClearOutlineSegments(tileState, tileIndices, centerPoint, tol2 = 0.02 ** 2) {
+    const tileSet = new Set(tileIndices);
+    const candidateEdges = [];
+
+    for (const ti of tileIndices) {
+        const tile = tileState[ti];
+        const vs = getVerts(tile.wx, tile.wy, tile.rot, tile.refl, tile.type);
+        for (let i = 0; i < vs.length; i++) {
+            const a = vs[i];
+            const b = vs[(i + 1) % vs.length];
+            if (sameVertex(a, centerPoint, tol2) || sameVertex(b, centerPoint, tol2)) continue;
+
+            let sharedWithinClear = false;
+            for (const otherTi of tileSet) {
+                if (otherTi === ti) continue;
+                const other = tileState[otherTi];
+                const ovs = getVerts(other.wx, other.wy, other.rot, other.refl, other.type);
+                for (let j = 0; j < ovs.length; j++) {
+                    const oa = ovs[j];
+                    const ob = ovs[(j + 1) % ovs.length];
+                    if (sameEdge(a, b, oa, ob, tol2)) {
+                        sharedWithinClear = true;
+                        break;
+                    }
+                }
+                if (sharedWithinClear) break;
+            }
+            if (!sharedWithinClear) candidateEdges.push({ ax: a.x, ay: a.y, bx: b.x, by: b.y });
+        }
+    }
+
+    return candidateEdges;
+}
+
+function checkCompletedVertices(tileState = tiles) {
+    const VTOL2 = 0.02 ** 2;  // shared-vertex proximity threshold²
+    const ATOL  = 2;           // degree tolerance for 360° sum
+
+    // Collect all (vertex-position, tile-index, angle) triples.
+    const entries = [];
+    for (let i = 0; i < tileState.length; i++) {
+        const t = tileState[i];
+        const vs = getVerts(t.wx, t.wy, t.rot, t.refl, t.type);
+        for (let vi = 0; vi < vs.length; vi++) {
+            entries.push({ x: vs[vi].x, y: vs[vi].y, ti: i, deg: VERT_DEG[t.type][vi] });
+        }
+    }
+
+    // Cluster entries by proximity.
+    const visited = new Uint8Array(entries.length);
+    let cleared = 0;
+    let completed = 0;
+    for (let a = 0; a < entries.length; a++) {
+        if (visited[a]) continue;
+        const cluster = [a];
+        visited[a] = 1;
+        for (let b = a + 1; b < entries.length; b++) {
+            if (visited[b]) continue;
+            const dx = entries[a].x - entries[b].x, dy = entries[a].y - entries[b].y;
+            if (dx*dx + dy*dy < VTOL2) { cluster.push(b); visited[b] = 1; }
+        }
+        if (cluster.length < 2) continue;  // need at least 2 tile-vertices at the same point
+        const sumDeg = cluster.reduce((s, i) => s + entries[i].deg, 0);
+        if (Math.abs(sumDeg - 360) > ATOL) continue;
+
+        // All tile indices touching this vertex.
+        const toRemove = new Set(cluster.map(i => entries[i].ti));
+        // Only trigger if at least one player-placed tile is involved.
+        if (![...toRemove].some(ti => !tileState[ti].fixed)) continue;
+
+        const centerPoint = {
+            x: cluster.reduce((sum, i) => sum + entries[i].x, 0) / cluster.length,
+            y: cluster.reduce((sum, i) => sum + entries[i].y, 0) / cluster.length,
+        };
+        const tileIndices = [...toRemove];
+        const removedIds = [...toRemove].map(ti => tileState[ti].id);
+        const outlineSegments = collectClearOutlineSegments(tileState, tileIndices, centerPoint, VTOL2);
+        const reducedTiles = tileState.filter((_, i) => !toRemove.has(i));
+        cleared += removedIds.length;
+        completed += 1;
+        // Indices have shifted — restart scan on updated array.
+        const rest = checkCompletedVertices(reducedTiles);
+        return {
+            tilesCleared: cleared + rest.tilesCleared,
+            verticesCompleted: completed + rest.verticesCompleted,
+            tileIdsToRemove: removedIds.concat(rest.tileIdsToRemove),
+            outlineSegments: outlineSegments.concat(rest.outlineSegments),
+        };
+    }
+    return { tilesCleared: cleared, verticesCompleted: completed, tileIdsToRemove: [], outlineSegments: [] };
+}
+
+// ── Tile generation ──────────────────────────────────────────────────────────
+function randType() {
+    const r = Math.random();
+    const stage = stageLevel(level);
+    if (stage === 1) {
+        // Pentagon level: kite, dart, and pentagon dominate; rhombi and triangles also appear.
+        if (r < 0.30) return 'kite';
+        if (r < 0.50) return 'dart';
+        if (r < 0.65) return 'pent';
+        if (r < 0.78) return 'thick';
+        if (r < 0.88) return 'thin';
+        if (r < 0.94) return 'thick-half';
+        return 'thin-half';
+    }
+    // All other levels: kite/dart at ~10% each; pent at ~5% in mode-0 only.
+    if (r < 0.10) return 'kite';
+    if (r < 0.20) return 'dart';
+    if (r < 0.25 && levelMode(level) === 0) return 'pent';
+    // Rhombi and triangles share the remainder with equal relative weights.
+    const r2 = Math.random();
+    if (r2 < 0.37) return 'thick';
+    if (r2 < 0.62) return 'thin';
+    if (r2 < 0.82) return 'thick-half';
+    return 'thin-half';
+}
+function randTile() {
+    const type = randType();
+    const refl = (type === 'thick-half' || type === 'thin-half') ? (Math.random()<0.5 ? 1 : -1) : 1;
+    return { type, rot: Math.floor(Math.random()*10), refl };
+}
+
+// On level 9, occasionally push a full supertile sequence into the queue.
+function fillQueue() {
+    while (queue.length < 5) {
+        if (stageLevel(level) >= 9 && Math.random() < 0.3) {
+            const def = SUPERTILE_DEFS[Math.floor(Math.random() * SUPERTILE_DEFS.length)];
+            const rot = Math.floor(Math.random() * 10);
+            for (const t of def.tiles) queue.push({ type: t.type, rot: (t.rot + rot) % 10, refl: t.refl });
+        } else {
+            queue.push(randTile());
+        }
+    }
+}
+
+// ── State ────────────────────────────────────────────────────────────────────
+let tiles=[], queue=[], ghost=null, landing=null, previewLanding=null;
+let fallingWy=0, lastTime=0;
+let score=0, level=1, placed=0, verticesCompletedThisLevel=0, speedCycle=0;
+let gameRunning=false, rafId=null, softDrop=false, paused=false, hardDropping=false;
+let lockDelayActive=false, lockDelayStart=0, lockDelayMoves=0, lockDelaySnap=null;
+let autoDropPreviewKey=null, autoDropPreviewSince=null;
+let nextTileId=1, clearingTileIds=new Set(), clearingSegments=[], clearHighlightTimer=null;
+const keys={};
+const touchState = {
+    active: false,
+    pointerId: null,
+    startX: 0,
+    startY: 0,
+    startWx: 0,
+    lastX: 0,
+    lastY: 0,
+    startTime: 0,
+    dropGestureLocked: false,
+};
+const levelSelect = document.getElementById('level-select');
+const helpModal = document.getElementById('help-modal');
+const levelModal = document.getElementById('level-modal');
+const builderOverlay = document.getElementById('builder-overlay');
+const customLevelModal = document.getElementById('custom-level-modal');
+const levelGrid = document.getElementById('level-grid');
+const pauseOverlay = document.getElementById('pause-overlay');
+const topbar = document.getElementById('topbar');
+const helpDesktopSection = document.getElementById('help-desktop');
+const helpPhoneSection = document.getElementById('help-phone');
+const levelFlash = document.getElementById('level-flash');
+const levelFlashTitle = document.getElementById('level-flash-title');
+const levelFlashSub = document.getElementById('level-flash-sub');
+let levelFlashTimer = null;
+
+function isCompactLayout() {
+    return canvas.width <= 720;
+}
+
+function modalOpen() {
+    return !helpModal.hidden || !levelModal.hidden || !builderOverlay.hidden
+        || !customLevelModal.hidden || !document.getElementById('save-filename-modal').hidden;
+}
+
+function openBuilderOverlay() {
+    clearInputState();
+    builderOverlay.hidden = false;
+}
+
+function closeBuilderOverlay() {
+    builderOverlay.hidden = true;
+    // Return focus to the game document — the iframe steals it while open.
+    document.getElementById('builder-iframe').blur();
+    window.focus();
+}
+
+function clearInputState() {
+    Object.keys(keys).forEach(k => delete keys[k]);
+    resetTouchState();
+    softDrop = false;
+}
+
+function resetTouchState() {
+    touchState.active = false;
+    touchState.pointerId = null;
+    touchState.dropGestureLocked = false;
+    softDrop = false;
+}
+
+function openHelpModal() {
+    clearInputState();
+    const compact = isCompactLayout();
+    helpDesktopSection.hidden = compact;
+    helpPhoneSection.hidden = !compact;
+    helpModal.hidden = false;
+    document.getElementById('help-ok').focus();
+}
+
+function closeHelpModal() {
+    helpModal.hidden = true;
+}
+
+function openLevelModal() {
+    clearInputState();
+    syncUnlockedLevelInputs();
+    renderLevelGrid();
+    levelModal.hidden = false;
+    levelGrid.querySelector('.level-grid-btn.current:not(.locked), .level-grid-btn:not(.locked)')?.focus();
+}
+
+function closeLevelModal() {
+    levelModal.hidden = true;
+}
+
+function showLevelFlash(title, subtitle = '') {
+    if (levelFlashTimer) clearTimeout(levelFlashTimer);
+    levelFlashTitle.textContent = title;
+    levelFlashSub.textContent = subtitle;
+    levelFlash.classList.add('show');
+    levelFlashTimer = setTimeout(() => {
+        levelFlash.classList.remove('show');
+        levelFlashTimer = null;
+    }, 900);
+}
+
+function togglePause() {
+    if (!gameRunning && !paused) return;
+    paused = !paused;
+    pauseOverlay.hidden = !paused;
+    if (paused) {
+        cancelAnimationFrame(rafId); rafId = null;
+        setMsg('Paused — press P to resume', '#94a3b8');
+        draw();
+        console.group(`PAUSE — ${tiles.length} tiles  ghost=${ghost?.type} rot=${ghost?.rot} refl=${ghost?.refl} wx=${ghost?.wx.toFixed(3)} fallingWy=${fallingWy.toFixed(3)}`);
+        for (const t of tiles) {
+            const vs = getVerts(t.wx, t.wy, t.rot, t.refl, t.type);
+            const vStr = vs.map(v=>`(${v.x.toFixed(3)},${v.y.toFixed(3)})`).join(' ');
+            console.log(`  ${t.fixed?'FIXED':'     '} ${t.type} rot=${t.rot} refl=${t.refl} wx=${t.wx.toFixed(3)} wy=${t.wy.toFixed(3)} — verts: ${vStr}`);
+        }
+        console.groupEnd();
+    } else {
+        setMsg('', '');
+        lastTime = performance.now();
+        rafId = requestAnimationFrame(gameLoop);
+    }
+}
+
+function chooseStartLevel(levelNumber) {
+    const unlockedMax = loadMaxCompletedLevel();
+    if (levelNumber < 1 || levelNumber > unlockedMax) return;
+    levelSelect.value = String(levelNumber);
+    syncUnlockedLevelInputs();
+    closeLevelModal();
+    startGame();
+}
+
+document.getElementById('builder-close').addEventListener('click', closeBuilderOverlay);
+
+window.addEventListener('message', e => {
+    if (e.data?.type !== 'penrose-game-level') return;
+    const raw = e.data.tiles;
+    if (!Array.isArray(raw) || raw.length === 0) return;
+    customGroundTiles = raw.map(t => ({ type: t.type, wx: t.wx, wy: t.wy, rotation: t.rotation, reflection: t.reflection }));
+    closeBuilderOverlay();
+    openCustomLevelModal();
+});
+
+function openCustomLevelModal() {
+    // Reset radio to shapes-only each time
+    document.querySelector('#custom-level-modal input[value="0"]').checked = true;
+    customLevelModal.hidden = false;
+}
+
+function closeCustomLevelModal() {
+    customLevelModal.hidden = true;
+}
+
+function selectedCustomRule() {
+    return parseInt(document.querySelector('#custom-level-modal input[name="custom-rule"]:checked').value);
+}
+
+function saveCustomLevel() {
+    if (!customGroundTiles) return;
+    const input = document.getElementById('save-filename-input');
+    input.value = 'custom_level';
+    document.getElementById('save-filename-modal').hidden = false;
+    setTimeout(() => { input.focus(); input.select(); }, 50);
+}
+
+function doSaveCustomLevel(name) {
+    const trimmed = (name || 'custom_level').trim() || 'custom_level';
+    const mode = customLevelMode;
+    const data = { version: 1, mode, tiles: customGroundTiles };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = trimmed.endsWith('.json') ? trimmed : trimmed + '.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+}
+
+document.getElementById('custom-level-close').addEventListener('click', closeCustomLevelModal);
+document.getElementById('custom-level-start').addEventListener('click', () => {
+    customLevelMode = selectedCustomRule();
+    closeCustomLevelModal();
+    applyCustomGround();
+});
+document.getElementById('custom-level-save').addEventListener('click', () => {
+    customLevelMode = selectedCustomRule();
+    saveCustomLevel();
+});
+
+// Custom ground set via the level builder (null = use built-in GROUND_DATA)
+let customGroundTiles = null;
+let customLevelMode   = 0; // 0=shapes, 1=colours, 2=full
+
+function applyCustomGround() {
+    if (!customGroundTiles) return;
+    if (gameRunning) {
+        gameRunning = false;
+        if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    }
+    startGameWithCustomGround();
+}
+
+function startGameWithCustomGround() {
+    if (!customGroundTiles) { startGame(); return; }
+    requestAppFullscreen();
+    syncUnlockedLevelInputs();
+    clearCompletedVertexHighlight();
+    if (levelFlashTimer) clearTimeout(levelFlashTimer);
+    levelFlash.classList.remove('show');
+    tiles = []; queue = [];
+    const startLevel = parseInt(levelSelect.value) || 1;
+    score = 0; level = startLevel; placed = 0; verticesCompletedThisLevel = 0;
+    speedCycle = levelCycle(startLevel); softDrop = false; paused = false;
+    Object.keys(keys).forEach(k => delete keys[k]);
+
+    // Normalise custom tiles into the play area (same logic as loadGroundConfig)
+    const raw = customGroundTiles;
+    let minX = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const ct of raw) {
+        for (const v of getVerts(ct.wx, ct.wy, ct.rotation, ct.reflection, ct.type)) {
+            if (v.x < minX) minX = v.x;
+            if (v.x > maxX) maxX = v.x;
+            if (v.y > maxY) maxY = v.y;
+        }
+    }
+    const dx = -((minX + maxX) / 2);
+    const dy = PLAY_BOTTOM - maxY;
+    tiles = raw
+        .map(ct => ({ ...ct, wx: ct.wx + dx, wy: ct.wy + dy, rot: ct.rotation, refl: ct.reflection, fixed: true, id: nextTileId++ }))
+        .filter(t => tileInsidePlayArea(t));
+
+    fillQueue();
+    const t = queue.shift();
+    ghost = { type: t.type, rot: t.rot, refl: t.refl };
+    ghost.wx = 0;
+    fallingWy = SPAWN_WY;
+    hardDropping = false;
+    autoDropPreviewKey = null; autoDropPreviewSince = null;
+    lockDelayActive = false; lockDelayStart = 0; lockDelayMoves = 0; lockDelaySnap = null;
+
+    resize(); fitCamera();
+    recomputeLanding(); updateHUD();
+    gameRunning = true;
+    pauseOverlay.hidden = true;
+    paused = false;
+    document.getElementById('overlay').classList.add('hidden');
+    document.getElementById('results-banner').hidden = true;
+    document.getElementById('view-board-btn').hidden = true;
+    setMsg('↑ rotate · snap preview auto-drops after 0.5s', '#94a3b8');
+    if (rafId) cancelAnimationFrame(rafId);
+    lastTime = performance.now();
+    rafId = requestAnimationFrame(gameLoop);
+    updateSaveCustomBtnVisibility();
+    showLevelFlash('Custom Level', 'Ground from builder');
+}
+
+document.addEventListener('keydown', e => {
+    if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'l') {
+        openBuilderOverlay();
+        e.preventDefault();
+        return;
+    }
+    if (e.key === 'Escape') {
+        if (!builderOverlay.hidden) {
+            closeBuilderOverlay();
+            e.preventDefault();
+            return;
+        }
+        if (!saveFilenameModal.hidden) {
+            saveFilenameModal.hidden = true;
+            e.preventDefault();
+            return;
+        }
+        if (!customLevelModal.hidden) {
+            closeCustomLevelModal();
+            e.preventDefault();
+            return;
+        }
+        if (!helpModal.hidden) {
+            closeHelpModal();
+            e.preventDefault();
+            return;
+        }
+        if (!levelModal.hidden) {
+            closeLevelModal();
+            e.preventDefault();
+            return;
+        }
+    }
+    if (!e.ctrlKey && !e.metaKey && !e.altKey && (e.key === 'h' || e.key === 'H')) {
+        openHelpModal();
+        e.preventDefault();
+        return;
+    }
+    if (modalOpen()) return;
+    if (e.key==='p'||e.key==='P') {
+        togglePause();
+        e.preventDefault(); return;
+    }
+    if (!gameRunning || !ghost || paused) return;
+    interruptHardDrop();
+    keys[e.key] = true;
+    if (e.key==='ArrowUp'||e.key==='z'||e.key==='Z') { ghost.rot=((ghost.rot-1)+10)%10; clampGhostToWell(); recomputeLanding(); e.preventDefault(); }
+    if (e.key==='x'||e.key==='X') { ghost.rot=(ghost.rot+1)%10; clampGhostToWell(); recomputeLanding(); e.preventDefault(); }
+    if (e.key==='ArrowDown')       { softDrop=true; e.preventDefault(); }
+    if (e.key==='ArrowLeft'||e.key==='ArrowRight') e.preventDefault();
+    if (e.key==='d'||e.key==='D') { debugLanding(); e.preventDefault(); }
+});
+document.addEventListener('keyup', e => {
+    delete keys[e.key];
+    if (e.key==='ArrowDown') softDrop=false;
+});
+
+// ── Camera ───────────────────────────────────────────────────────────────────
+let cam = { x:0, y:0, zoom:1 };
+function w2c(wx,wy){ const s=BS*cam.zoom; return {x:wx*s+cam.x, y:wy*s+cam.y}; }
+function c2w(cx,cy){ const s=BS*cam.zoom; return {x:(cx-cam.x)/s, y:(cy-cam.y)/s}; }
+
+function fitCamera() {
+    const s0 = BS;
+    const isCompact = canvas.width <= 720;
+    const safeTop = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--safe-top')) || 0;
+    const topInset = (isCompact ? 92 : 72) + safeTop;
+    const bottomInset = isCompact ? 52 : 28;
+    const sideInset = isCompact ? 8 : canvas.width * 0.09;
+    const availW = Math.max(120, canvas.width - sideInset * 2);
+    const availH = Math.max(120, canvas.height - topInset - bottomInset);
+    const zx = availW / (PLAY_W * s0);
+    const zy = availH / (PLAY_H * s0);
+    cam.zoom = Math.min(zx, zy, 1.4);
+    const s = BS * cam.zoom;
+    cam.x = canvas.width / 2; // well centred at wx=0
+    cam.y = topInset - PLAY_TOP * s;
+}
+
+// ── Canvas ───────────────────────────────────────────────────────────────────
+const canvas = document.getElementById('c'),  ctx = canvas.getContext('2d');
+
+function canHandleTouchGesture() {
+    return gameRunning && ghost && !paused && !modalOpen();
+}
+
+function moveGhostByScreenDelta(dxPx) {
+    if (!ghost) return;
+    const worldDx = dxPx / (BS * cam.zoom);
+    if (Math.abs(worldDx) < 1e-4) return;
+    const nwx = ghost.wx + worldDx;
+    const verts = getVerts(nwx, fallingWy, ghost.rot, ghost.refl, ghost.type);
+    if (Math.min(...verts.map(v => v.x)) < PLAY_LEFT || Math.max(...verts.map(v => v.x)) > PLAY_RIGHT) return;
+    if (wouldOverlap(nwx, fallingWy)) return;
+    ghost.wx = nwx;
+    recomputeLanding();
+}
+
+canvas.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse' || touchState.active || !canHandleTouchGesture()) return;
+    interruptHardDrop();
+    touchState.active = true;
+    touchState.pointerId = e.pointerId;
+    touchState.startX = touchState.lastX = e.clientX;
+    touchState.startY = touchState.lastY = e.clientY;
+    touchState.startWx = ghost?.wx ?? 0;
+    touchState.startTime = performance.now();
+    touchState.dropGestureLocked = false;
+    softDrop = false;
+    canvas.setPointerCapture?.(e.pointerId);
+    e.preventDefault();
+});
+
+canvas.addEventListener('pointermove', e => {
+    if (!touchState.active || e.pointerId !== touchState.pointerId || !canHandleTouchGesture()) return;
+    interruptHardDrop();
+    const dx = e.clientX - touchState.lastX;
+    const totalDx = e.clientX - touchState.startX;
+    const totalDy = e.clientY - touchState.startY;
+
+    if (!touchState.dropGestureLocked && totalDy > 28 && totalDy > Math.abs(totalDx) * 1.2) {
+        touchState.dropGestureLocked = true;
+        if (ghost) {
+            ghost.wx = touchState.startWx;
+            recomputeLanding();
+        }
+    }
+    if (!touchState.dropGestureLocked) moveGhostByScreenDelta(dx);
+    softDrop = totalDy > 26;
+
+    touchState.lastX = e.clientX;
+    touchState.lastY = e.clientY;
+    e.preventDefault();
+});
+
+canvas.addEventListener('pointerup', e => {
+    if (!touchState.active || e.pointerId !== touchState.pointerId) return;
+    const totalDx = e.clientX - touchState.startX;
+    const totalDy = e.clientY - touchState.startY;
+    const elapsed = performance.now() - touchState.startTime;
+    // A tap is a touch that barely moved and was quick.
+    // Tap position (left/right half of canvas) determines rotation direction.
+    const wasTap = Math.abs(totalDx) < 14 && Math.abs(totalDy) < 14 && elapsed < TOUCH_TAP_MAX_MS;
+    const tapOnLeftHalf = touchState.startX < canvas.clientWidth / 2;
+    resetTouchState();
+    if (wasTap && canHandleTouchGesture()) {
+        if (tapOnLeftHalf) {
+            ghost.rot = (ghost.rot + 1) % 10;          // CW
+        } else {
+            ghost.rot = ((ghost.rot - 1) + 10) % 10;  // CCW
+        }
+        clampGhostToWell();
+        recomputeLanding();
+    }
+    e.preventDefault();
+});
+
+canvas.addEventListener('pointercancel', e => {
+    if (e.pointerId === touchState.pointerId) {
+        resetTouchState();
+    }
+});
+
+canvas.addEventListener('lostpointercapture', () => {
+    resetTouchState();
+});
+
+function resize() {
+    canvas.width = canvas.clientWidth;
+    canvas.height = canvas.clientHeight;
+    fitCamera();
+}
+window.addEventListener('resize', () => { resize(); draw(); });
+
+async function requestAppFullscreen() {
+    const el = document.documentElement;
+    if (document.fullscreenElement) return true;
+    try {
+        if (el.requestFullscreen) {
+            await el.requestFullscreen({ navigationUI: 'hide' });
+            return true;
+        }
+    } catch {}
+    try {
+        if (el.webkitRequestFullscreen) {
+            el.webkitRequestFullscreen();
+            return true;
+        }
+    } catch {}
+    return false;
+}
+
+// ── Drawing ───────────────────────────────────────────────────────────────────
+function drawTile(wx, wy, rot, refl, type, fill, stroke, lw, alpha, showMarks = true) {
+    const s = BS * cam.zoom;
+    const vs = getVerts(wx, wy, rot, refl, type);
+    const cv = vs.map(v => ({x: v.x*s+cam.x, y: v.y*s+cam.y}));
+    ctx.globalAlpha = alpha ?? 1;
+    ctx.beginPath(); cv.forEach((v,i) => i===0 ? ctx.moveTo(v.x,v.y) : ctx.lineTo(v.x,v.y)); ctx.closePath();
+    ctx.fillStyle=fill; ctx.fill();
+    ctx.strokeStyle=stroke; ctx.lineWidth=lw; ctx.stroke();
+    if (showMarks) drawMarkings(ctx, cv, type);
+    ctx.globalAlpha = 1;
+}
+
+function drawMarkings(c, cv, type) {
+    const mode = levelMode(level);
+    const n = cv.length;
+    const r = Math.max(3, 4*cam.zoom);
+    for (let i=0; i<n; i++) {
+        c.globalAlpha = 1;
+        c.beginPath(); c.arc(cv[i].x, cv[i].y, r, 0, Math.PI*2);
+        // mode 0: all vertices the same neutral colour; mode 1+: green/purple
+        c.fillStyle = mode === 0 ? '#4ade80' : (VCOL[type][i]==='purple' ? '#c084fc' : '#4ade80');
+        c.fill();
+    }
+    if (mode < 2) return; // no arrows on levels 1-4
+    const hs = Math.max(7, 9*cam.zoom);
+    for (let i=0; i<n; i++) {
+        const dir = EARR[type][i]; if (!dir) continue;
+        const a=cv[i], b=cv[(i+1)%n];
+        const sx=dir>0?a.x:b.x, sy=dir>0?a.y:b.y;
+        const ex=dir>0?b.x:a.x, ey=dir>0?b.y:a.y;
+        const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
+        const len=Math.hypot(ex-sx,ey-sy); if(len<1) continue;
+        const ndx=(ex-sx)/len, ndy=(ey-sy)/len, px=-ndy, py=ndx;
+        c.globalAlpha = 1;
+        c.beginPath();
+        c.moveTo(mx+ndx*hs*0.3, my+ndy*hs*0.3);           // tip (toward destination)
+        c.lineTo(mx-ndx*hs+px*hs*0.6, my-ndy*hs+py*hs*0.6); // left wing
+        c.lineTo(mx-ndx*hs*0.3, my-ndy*hs*0.3);            // notch
+        c.lineTo(mx-ndx*hs-px*hs*0.6, my-ndy*hs-py*hs*0.6); // right wing
+        c.closePath(); c.fillStyle='#fbbf24'; c.fill();
+        c.globalAlpha = 1;
+    }
+}
+
+function drawPlayArea() {
+    const tl = w2c(PLAY_LEFT,  PLAY_TOP);
+    const br = w2c(PLAY_RIGHT, PLAY_BOTTOM);
+    // Well interior
+    ctx.fillStyle = '#141e30';
+    ctx.fillRect(tl.x, tl.y, br.x-tl.x, br.y-tl.y);
+    // Well border
+    ctx.strokeStyle = '#4a5e7a';
+    ctx.lineWidth   = 3;
+    ctx.beginPath();
+    ctx.moveTo(tl.x, tl.y);
+    ctx.lineTo(br.x, tl.y);  // top boundary
+    ctx.moveTo(tl.x, tl.y);
+    ctx.lineTo(tl.x, br.y);  // left wall
+    ctx.lineTo(br.x, br.y);  // floor
+    ctx.lineTo(br.x, tl.y);  // right wall
+    ctx.stroke();
+    // Danger zone at top
+    const dangerY = w2c(0, PLAY_TOP + 1.5).y;
+    ctx.fillStyle = 'rgba(239,68,68,0.06)';
+    ctx.fillRect(tl.x, tl.y, br.x-tl.x, dangerY-tl.y);
+}
+
+function drawDashedSegments(segments, stroke = '#ff4fd8') {
+    if (!segments.length) return;
+    const s = BS * cam.zoom;
+    ctx.save();
+    ctx.setLineDash([10, 6]);
+    ctx.lineDashOffset = -performance.now() / 40;
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    for (const seg of segments) {
+        ctx.moveTo(seg.ax * s + cam.x, seg.ay * s + cam.y);
+        ctx.lineTo(seg.bx * s + cam.x, seg.by * s + cam.y);
+    }
+    ctx.stroke();
+    ctx.restore();
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawPlayArea();
+
+    // Clip drawing to play area so fixed ground tiles don't bleed outside.
+    const tl = w2c(PLAY_LEFT, PLAY_TOP), br = w2c(PLAY_RIGHT, PLAY_BOTTOM);
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(tl.x, tl.y, br.x-tl.x, br.y-tl.y);
+    ctx.clip();
+
+    for (const t of tiles) {
+        if (clearingTileIds.has(t.id)) {
+            drawTile(t.wx, t.wy, t.rot, t.refl, t.type, 'rgba(0,0,0,0)', '#ffffff18', 1, 1, false);
+        } else {
+            drawTile(t.wx,t.wy,t.rot,t.refl,t.type, TCOL[t.type]+'60', TCOL[t.type], 1.5, 1);
+        }
+    }
+    drawDashedSegments(clearingSegments);
+    ctx.restore();
+
+    drawNext();
+
+    if (!gameRunning || !ghost) return;
+
+    // Ghost (landing preview) — show as soon as there's a valid snap anywhere below
+    if (previewLanding && Math.abs(ghost.wx - previewLanding.wx) <= SNAP_ALIGN_TOL)
+        drawTile(previewLanding.wx,previewLanding.wy,ghost.rot,ghost.refl,ghost.type,
+                 TCOL[ghost.type]+'18', TCOL[ghost.type]+'60', 1, 0.5);
+
+    // Falling piece — solid
+    drawTile(ghost.wx, fallingWy, ghost.rot, ghost.refl, ghost.type,
+             TCOL[ghost.type]+'50', TCOL[ghost.type], 2, 1);
+
+    // Paused overlay
+    if (paused) {
+        ctx.fillStyle = 'rgba(15,23,42,0.55)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = `bold ${Math.round(canvas.height * 0.07)}px Inter,sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2);
+        ctx.font = `${Math.round(canvas.height * 0.03)}px Inter,sans-serif`;
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillText('Press P to resume', canvas.width / 2, canvas.height / 2 + canvas.height * 0.09);
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
+    }
+}
+
+// Draw the next-3 preview panel onto the main canvas, just to the right of the play well.
+// Draw the next-3 preview panel onto the main canvas, just to the right of the play well.
+function drawNext() {
+    if (!queue.length) return;
+    const tl = w2c(PLAY_LEFT, PLAY_TOP), br = w2c(PLAY_RIGHT, PLAY_BOTTOM);
+    const isCompact = canvas.width <= 720;
+    const wellW = br.x - tl.x;
+    const gapX = 10;
+    const panelPad = isCompact ? 8 : 10;
+    const panelW = isCompact
+        ? Math.max(42, Math.min(56, wellW * 0.13))
+        : Math.max(60, Math.min(110, canvas.width - br.x - gapX - 8));
+    const cellH  = isCompact
+        ? Math.min(34, (br.y - tl.y - 16) / 3)
+        : Math.min(80, (br.y - tl.y - 22) / 3);
+    const panelH = isCompact ? (cellH * 3 + 8) : (cellH * 3 + 22);
+    const panelX = isCompact ? (br.x - panelW - panelPad) : (br.x + gapX);
+    const panelY = tl.y + (isCompact ? panelPad : 0);
+
+    // Panel background
+    ctx.fillStyle = isCompact ? 'rgba(15,23,42,0.55)' : '#1e293b99';
+    ctx.fillRect(panelX, panelY, panelW, panelH);
+    ctx.strokeStyle = 'rgba(148,163,184,0.22)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(panelX + 0.5, panelY + 0.5, panelW - 1, panelH - 1);
+
+    if (!isCompact) {
+        ctx.save();
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '600 10px Inter,sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText('NEXT', panelX + panelW / 2, panelY + 7);
+        ctx.restore();
+    }
+
+    const preview = queue.slice(0, 3);
+    const nmode   = levelMode(level);
+    const dotR    = isCompact ? 1 : 3;
+    const pad     = isCompact ? 5 : 6;
+
+    for (let qi = 0; qi < preview.length; qi++) {
+        const t    = preview[qi];
+        const tmpl = TILE_VERTS[t.type];
+        const xs   = tmpl.map(v => v[0]), ys = tmpl.map(v => v[1]);
+        const mnX  = Math.min(...xs), mxX = Math.max(...xs);
+        const mnY  = Math.min(...ys), mxY = Math.max(...ys);
+        const baseScale = Math.min((panelW - 2*pad) / (mxX - mnX || 1),
+                                   (cellH  - 2*pad) / (mxY - mnY || 1));
+        const scl  = isCompact ? (0.5 * baseScale) : baseScale;
+        const ox   = panelX + panelW / 2 - (mnX + mxX) / 2 * scl;
+        const oy   = isCompact
+            ? panelY + cellH * (qi + 0.5) + 4 - (mnY + mxY) / 2 * scl
+            : panelY + 22 + cellH * (qi + 0.5) - (mnY + mxY) / 2 * scl;
+        const cv   = tmpl.map(([tx, ty]) => ({ x: tx * scl + ox, y: ty * scl + oy }));
+        const col  = TCOL[t.type];
+
+        ctx.globalAlpha = qi === 0 ? 1 : 0.45;
+        ctx.beginPath();
+        cv.forEach((v, i) => i === 0 ? ctx.moveTo(v.x, v.y) : ctx.lineTo(v.x, v.y));
+        ctx.closePath();
+        ctx.fillStyle   = col + (qi === 0 ? '40' : '18');
+        ctx.fill();
+        ctx.strokeStyle = col;
+        ctx.lineWidth   = qi === 0 ? 2 : 1;
+        ctx.stroke();
+
+        for (let i = 0; i < cv.length; i++) {
+            ctx.beginPath();
+            ctx.arc(cv[i].x, cv[i].y, dotR, 0, Math.PI * 2);
+            ctx.fillStyle = nmode === 0 ? '#4ade80'
+                : (VCOL[t.type][i] === 'purple' ? '#c084fc' : '#4ade80');
+            ctx.fill();
+        }
+    }
+    ctx.globalAlpha = 1;
+}
+
+// ── Logic ─────────────────────────────────────────────────────────────────────
+function clampGhostToWell() {
+    const verts = getVerts(ghost.wx, fallingWy, ghost.rot, ghost.refl, ghost.type);
+    const minX = Math.min(...verts.map(v => v.x));
+    const maxX = Math.max(...verts.map(v => v.x));
+    if (minX < PLAY_LEFT)  ghost.wx += PLAY_LEFT  - minX;
+    if (maxX > PLAY_RIGHT) ghost.wx -= maxX - PLAY_RIGHT;
+}
+
+function pathClear(wx, fromWy, toWy) {
+    const steps = Math.max(1, Math.ceil((toWy - fromWy) / 0.1));
+    for (let i = 1; i < steps; i++) {
+        const wy = fromWy + (toWy - fromWy) * i / steps;
+        if (wouldOverlap(wx, wy)) return false;
+    }
+    return true;
+}
+
+function recomputeLanding() {
+    landing = findLanding(ghost.type, ghost.rot, ghost.refl, ghost.wx, fallingWy, SNAP_ALIGN_TOL);
+
+    // Discard landing if the path to it is blocked (tile can never reach it).
+    if (landing && !pathClear(landing.wx, fallingWy, landing.wy)) landing = null;
+    previewLanding = landing;
+
+    // Suppress snap if player is actively steering away from it (opposite arrow key held).
+    if (landing) {
+        const snapDir = landing.wx - ghost.wx;
+        if ((snapDir > 0.01 && keys['ArrowLeft']) || (snapDir < -0.01 && keys['ArrowRight'])) {
+            landing = null;
+            previewLanding = null;
+        }
+    }
+}
+
+function previewLandingKey() {
+    if (!ghost || !previewLanding) return null;
+    return [
+        ghost.type,
+        ghost.rot,
+        ghost.refl,
+        previewLanding.wx.toFixed(4),
+        previewLanding.wy.toFixed(4)
+    ].join('|');
+}
+
+function syncAutoDropPreview(ts) {
+    const key = previewLandingKey();
+    // Only auto-drop for edge snaps, not bare vertex-to-vertex contacts.
+    if (!key || !snapIsEdge(previewLanding.wx, previewLanding.wy, ghost.type, ghost.rot, ghost.refl)) {
+        autoDropPreviewKey = null;
+        autoDropPreviewSince = null;
+        return;
+    }
+    if (key !== autoDropPreviewKey) {
+        autoDropPreviewKey = key;
+        autoDropPreviewSince = touchState.active ? null : ts;
+        return;
+    }
+    if (touchState.active) {
+        autoDropPreviewSince = null;
+        return;
+    }
+    if (autoDropPreviewSince === null) {
+        autoDropPreviewSince = ts;
+        return;
+    }
+    if (!hardDropping && ts - autoDropPreviewSince >= AUTO_DROP_PREVIEW_MS) {
+        ghost.wx = previewLanding.wx;
+        hardDrop();
+    }
+}
+
+function interruptHardDrop(ts = performance.now()) {
+    if (!hardDropping) return;
+    hardDropping = false;
+    recomputeLanding();
+    autoDropPreviewKey = previewLandingKey();
+    autoDropPreviewSince = autoDropPreviewKey ? (touchState.active ? null : ts) : null;
+}
+
+function clearCompletedVertexHighlight() {
+    if (clearHighlightTimer !== null) {
+        clearTimeout(clearHighlightTimer);
+        clearHighlightTimer = null;
+    }
+    clearingTileIds.clear();
+    clearingSegments = [];
+}
+
+function levelComplete() {
+    const clearedLevel = level;
+    saveMaxCompletedLevel(clearedLevel + 1);
+    clearCompletedVertexHighlight();
+    score += level * 50;
+    level++;
+    speedCycle = levelCycle(level);
+    verticesCompletedThisLevel = 0;
+    tiles = loadGroundConfig(level);
+    ghost = null; landing = null; previewLanding = null;
+    hardDropping = false;
+    autoDropPreviewKey = null;
+    autoDropPreviewSince = null;
+    syncUnlockedLevelInputs();
+    updateHUD();
+    showLevelFlash(`Level ${clearedLevel} Cleared`, `Level ${level} up next`);
+    setMsg(`Level complete! +bonus`, '#38bdf8');
+    draw();
+    // Brief pause then spawn the next tile.
+    setTimeout(() => {
+        if (gameRunning) { spawnNext(); }
+    }, 1200);
+}
+
+function lockTile(wx, wy) {
+    tiles.push({ type:ghost.type, wx, wy, rot:ghost.rot, refl:ghost.refl, id: nextTileId++ });
+    placed++; score += 10 + (level-1)*5;
+
+    const { tilesCleared, verticesCompleted, tileIdsToRemove, outlineSegments } = checkCompletedVertices();
+    if (verticesCompleted > 0) {
+        ghost = null; landing = null; previewLanding = null;
+        hardDropping = false;
+        autoDropPreviewKey = null;
+        autoDropPreviewSince = null;
+        clearingTileIds = new Set(tileIdsToRemove);
+        clearingSegments = outlineSegments;
+        draw();
+        clearHighlightTimer = setTimeout(() => {
+            tiles = tiles.filter(t => !clearingTileIds.has(t.id));
+            clearCompletedVertexHighlight();
+            verticesCompletedThisLevel += verticesCompleted;
+            score += tilesCleared * (20 + (level-1)*10);
+            if (verticesCompletedThisLevel >= levelGoal(level)) {
+                levelComplete();
+                return;
+            }
+            setMsg(
+                `${verticesCompleted} vertex${verticesCompleted!==1?'es':''} completed`,
+                '#4ade80'
+            );
+            updateHUD();
+            spawnNext();
+        }, CLEAR_HIGHLIGHT_MS);
+        updateHUD();
+        return;
+    }
+
+    updateHUD();
+    spawnNext();
+}
+
+function hardDrop() {
+    hardDropping = true;
+    recomputeLanding();
+}
+
+function spawnNext() {
+    fillQueue();
+    const t = queue.shift();
+    ghost = { type:t.type, rot:t.rot, refl:t.refl };
+    // Horizontal center of current tiling
+    ghost.wx = tiles.length>0 ? tiles.reduce((s,t)=>s+t.wx,0)/tiles.length : 0;
+    ghost.wx = Math.max(PLAY_LEFT+0.5, Math.min(PLAY_RIGHT-0.5, ghost.wx));
+    fallingWy = SPAWN_WY;
+    hardDropping = false;
+    autoDropPreviewKey = null;
+    autoDropPreviewSince = null;
+    lockDelayActive = false; lockDelayStart = 0; lockDelayMoves = 0; lockDelaySnap = null;
+    recomputeLanding();
+    // Immediate overlap at spawn → game over
+    if (wouldOverlap(ghost.wx, fallingWy)) {
+        logDeath('spawn', ghost.wx, fallingWy);
+        endGame(); return;
+    }
+    setMsg('', '');
+}
+
+// ── Debug logging ─────────────────────────────────────────────────────────────
+function logDeath(reason, wx, wy) {
+    const gv = getVerts(wx, wy, ghost.rot, ghost.refl, ghost.type);
+    const fmt = v => `(${v.x.toFixed(4)},${v.y.toFixed(4)})`;
+    const fmtV = vs => vs.map(fmt).join(' ');
+    const TOL2 = 0.02**2;
+
+    console.group(`DEATH [${reason}]  ghost=${ghost.type} rot=${ghost.rot} refl=${ghost.refl}  wx=${wx.toFixed(4)} wy=${wy.toFixed(4)}`);
+    console.log('ghost verts:', fmtV(gv));
+
+    if (landing)
+        console.log(`landing: (${landing.wx.toFixed(4)},${landing.wy.toFixed(4)})  dX=${Math.abs(wx-landing.wx).toFixed(4)}  dY=${Math.abs(wy-landing.wy).toFixed(4)}`);
+    else
+        console.log('landing: none');
+
+    for (const t of tiles) {
+        const tv = getVerts(t.wx, t.wy, t.rot, t.refl, t.type);
+        const doesOverlap = overlaps(gv, tv);
+        const sharedVerts = [];
+        for (let i=0; i<gv.length; i++)
+            for (let j=0; j<tv.length; j++)
+                if (dist2(gv[i],tv[j]) < TOL2)
+                    sharedVerts.push(`g${i}↔t${j} dist=${Math.sqrt(dist2(gv[i],tv[j])).toFixed(5)}`);
+        const sharedEdges = [];
+        for (let e1=0; e1<gv.length; e1++) {
+            const a1=gv[e1], b1=gv[(e1+1)%gv.length];
+            for (let e2=0; e2<tv.length; e2++) {
+                const a2=tv[e2], b2=tv[(e2+1)%tv.length];
+                if ((dist2(a1,b2)<TOL2&&dist2(b1,a2)<TOL2)||(dist2(a1,a2)<TOL2&&dist2(b1,b2)<TOL2))
+                    sharedEdges.push(`gEdge${e1}↔tEdge${e2}`);
+            }
+        }
+        if (doesOverlap || sharedVerts.length || sharedEdges.length) {
+            console.log(
+                `  tile ${t.type} rot=${t.rot} refl=${t.refl} fixed=${!!t.fixed} (${t.wx.toFixed(4)},${t.wy.toFixed(4)})`,
+                `\n    verts: ${fmtV(tv)}`,
+                `\n    overlap=${doesOverlap}  sharedVerts=[${sharedVerts.join(', ')}]  sharedEdges=[${sharedEdges.join(', ')}]`
+            );
+        }
+    }
+    console.groupEnd();
+}
+
+// ── Game loop ────────────────────────────────────────────────────────────────
+function gameLoop(ts) {
+    if (!gameRunning) return;
+    const dt = Math.min(ts - lastTime, 50) / 1000;
+    lastTime = ts;
+
+    if (modalOpen()) { draw(); rafId = requestAnimationFrame(gameLoop); return; }
+    if (!ghost) { draw(); rafId = requestAnimationFrame(gameLoop); return; }
+
+    // Horizontal movement — block if would overlap or leave well
+    if (keys['ArrowLeft']) {
+        const nwx = ghost.wx - MOVE_SPEED * dt;
+        const verts = getVerts(nwx, fallingWy, ghost.rot, ghost.refl, ghost.type);
+        if (Math.min(...verts.map(v => v.x)) >= PLAY_LEFT && !wouldOverlap(nwx, fallingWy)) {
+            ghost.wx = nwx; recomputeLanding();
+            if (lockDelayActive && lockDelayMoves < LOCK_DELAY_MAX_MOVES) {
+                lockDelayMoves++;
+                lockDelayStart = ts; // reset the timer on each move
+            }
+        }
+    }
+    if (keys['ArrowRight']) {
+        const nwx = ghost.wx + MOVE_SPEED * dt;
+        const verts = getVerts(nwx, fallingWy, ghost.rot, ghost.refl, ghost.type);
+        if (Math.max(...verts.map(v => v.x)) <= PLAY_RIGHT && !wouldOverlap(nwx, fallingWy)) {
+            ghost.wx = nwx; recomputeLanding();
+            if (lockDelayActive && lockDelayMoves < LOCK_DELAY_MAX_MOVES) {
+                lockDelayMoves++;
+                lockDelayStart = ts; // reset the timer on each move
+            }
+        }
+    }
+
+    // Fall
+    const speed  = hardDropping ? HARD_DROP_SPEED : fallSpeed(speedCycle) * (softDrop ? 6 : 1);
+
+    // Lock-delay: if the tile is near a snap's Y but not yet X-aligned, slow the fall
+    // to give the player time to slide into position — but only if the player is
+    // actively steering toward the snap (correct arrow key held).
+    let effectiveSpeed = speed;
+    if (!hardDropping) {
+        const nearby = previewLanding ?? findLanding(ghost.type, ghost.rot, ghost.refl, ghost.wx, fallingWy);
+        if (nearby && (fallingWy + speed * dt) >= nearby.wy && Math.abs(ghost.wx - nearby.wx) <= LOCK_DELAY_X_TOL) {
+            const dx = nearby.wx - ghost.wx;
+            const steeringToward = (dx > 0.01 && keys['ArrowRight']) || (dx < -0.01 && keys['ArrowLeft']);
+            if (steeringToward) {
+                if (!lockDelayActive) {
+                    lockDelayActive = true;
+                    lockDelayStart  = ts;
+                    lockDelayMoves  = 0;
+                    lockDelaySnap   = nearby;
+                }
+                if (ts - lockDelayStart < LOCK_DELAY_MS && lockDelayMoves < LOCK_DELAY_MAX_MOVES) {
+                    effectiveSpeed = speed * LOCK_DELAY_SLOW;
+                } else {
+                    // Delay expired — resume normal speed.
+                    lockDelayActive = false; lockDelaySnap = null;
+                }
+            } else if (lockDelayActive) {
+                // Player stopped steering toward the snap — cancel delay.
+                lockDelayActive = false; lockDelaySnap = null;
+            }
+        } else if (lockDelayActive) {
+            // Snap moved out of range — cancel delay.
+            lockDelayActive = false; lockDelaySnap = null;
+        }
+    }
+
+    const newWy  = fallingWy + effectiveSpeed * dt;
+
+    // Recompute landing every frame so it stays ahead of the falling position.
+    recomputeLanding();
+    syncAutoDropPreview(ts);
+
+    // Auto-snap FIRST — before floor/overlap checks, because at the snap position
+    // the tile may share edges with placed tiles (which would look like overlap).
+    if (landing && newWy >= landing.wy && Math.abs(ghost.wx - landing.wx) <= SNAP_ALIGN_TOL) {
+        lockTile(landing.wx, landing.wy); rafId=requestAnimationFrame(gameLoop); return;
+    }
+
+    if (newWy > PLAY_BOTTOM + 1e-6) {
+        logDeath('floor', ghost.wx, newWy);
+        endGame(); return;
+    }
+
+    // Collision check — if we clip any tile but have a validated aligned landing,
+    // snap to it: the tile is passing through a neighbour's body on the way to a
+    // legal edge/vertex join (validSnap already confirmed no overlap at landing).
+    if (wouldOverlap(ghost.wx, newWy)) {
+        // Ignore snap resistance on collision — find any reachable snap to save the tile.
+        const rescue = landing ?? findLanding(ghost.type, ghost.rot, ghost.refl, ghost.wx, fallingWy, SNAP_ALIGN_TOL);
+        if (rescue && pathClear(rescue.wx, fallingWy, rescue.wy) && Math.abs(ghost.wx - rescue.wx) <= SNAP_ALIGN_TOL) {
+            lockTile(rescue.wx, rescue.wy); rafId=requestAnimationFrame(gameLoop); return;
+        }
+        logDeath('overlap-no-snap', ghost.wx, newWy);
+        endGame(); return;
+    }
+    fallingWy = newWy;
+
+    draw();
+    rafId = requestAnimationFrame(gameLoop);
+}
+
+// ── High score table ──────────────────────────────────────────────────────────
+const HS_KEY  = 'penrose-scores';
+const HS_MAX  = 10;
+const UNLOCK_KEY = 'penrose-max-completed-level';
+
+function loadScores() {
+    try { return JSON.parse(localStorage.getItem(HS_KEY)) || []; }
+    catch { return []; }
+}
+
+function saveScore(sc, lv, pl) {
+    const scores = loadScores();
+    const entry  = { score: sc, level: lv, placed: pl,
+                     date: new Date().toLocaleDateString(undefined, {month:'short', day:'numeric'}) };
+    scores.push(entry);
+    scores.sort((a, b) => b.score - a.score);
+    scores.splice(HS_MAX);
+    localStorage.setItem(HS_KEY, JSON.stringify(scores));
+    return scores.findIndex(e => e === entry); // rank of new entry (0-based)
+}
+
+function renderScoreTable(newRank) {
+    const scores = loadScores();
+    const tbody  = document.getElementById('hs-body');
+    tbody.innerHTML = '';
+    scores.forEach((e, i) => {
+        const tr = document.createElement('tr');
+        if (i === newRank) tr.className = 'hs-new';
+        tr.innerHTML = `<td>${i+1}</td><td>${e.score.toLocaleString()}</td>`
+                     + `<td>${e.level}</td><td>${e.placed}</td><td>${e.date}</td>`;
+        tbody.appendChild(tr);
+    });
+    document.getElementById('hs-table').style.display = scores.length ? '' : 'none';
+}
+
+function updateBestDisplay() {
+    const scores = loadScores();
+    const best   = scores.length ? scores[0].score : null;
+    document.getElementById('v-best').textContent = best !== null ? best.toLocaleString() : '–';
+}
+
+function loadMaxCompletedLevel() {
+    try {
+        const stored = parseInt(localStorage.getItem(UNLOCK_KEY), 10);
+        return Math.max(1, Number.isFinite(stored) ? stored : 1);
+    } catch {
+        return 1;
+    }
+}
+
+function saveMaxCompletedLevel(levelCompleted) {
+    const nextUnlocked = Math.max(loadMaxCompletedLevel(), Math.max(1, levelCompleted));
+    localStorage.setItem(UNLOCK_KEY, String(nextUnlocked));
+    return nextUnlocked;
+}
+
+function updateStartLevelDisplay() {
+    const unlockedMax = loadMaxCompletedLevel();
+    const selected = Math.max(1, Math.min(unlockedMax, parseInt(levelSelect.value, 10) || 1));
+    document.getElementById('ov-level').textContent =
+        unlockedMax > 1
+            ? `Start Level: ${selected} (unlocked ${unlockedMax})`
+            : 'Start Level: 1';
+}
+
+function renderLevelGrid() {
+    const unlockedMax = loadMaxCompletedLevel();
+    const selected = Math.max(1, Math.min(unlockedMax, parseInt(levelSelect.value, 10) || 1));
+    levelGrid.innerHTML = '';
+    for (let levelNumber = 1; levelNumber <= LEVEL_PICKER_MAX; levelNumber++) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'level-grid-btn';
+        btn.textContent = String(levelNumber);
+        btn.dataset.level = String(levelNumber);
+        btn.setAttribute('aria-label', `Start at level ${levelNumber}`);
+        if (levelNumber === selected) btn.classList.add('current');
+        if (levelNumber > unlockedMax) {
+            btn.classList.add('locked');
+            btn.disabled = true;
+            btn.setAttribute('aria-label', `Level ${levelNumber} locked`);
+        }
+        levelGrid.appendChild(btn);
+    }
+}
+
+function syncUnlockedLevelInputs() {
+    const unlockedMax = loadMaxCompletedLevel();
+    levelSelect.min = '1';
+    levelSelect.max = String(unlockedMax);
+
+    const selected = Math.max(1, Math.min(unlockedMax, parseInt(levelSelect.value, 10) || 1));
+    levelSelect.value = String(selected);
+    updateStartLevelDisplay();
+    renderLevelGrid();
+}
+
+// ── Game flow ─────────────────────────────────────────────────────────────────
+function startGame() {
+    customGroundTiles = null; // ensure normal levels use built-in GROUND_DATA + levelMode
+    updateSaveCustomBtnVisibility();
+    requestAppFullscreen();
+    syncUnlockedLevelInputs();
+    clearCompletedVertexHighlight();
+    if (levelFlashTimer) clearTimeout(levelFlashTimer);
+    levelFlash.classList.remove('show');
+    tiles = []; queue = [];
+    const startLevel = parseInt(levelSelect.value) || 1;
+    score=0; level=startLevel; placed=0; verticesCompletedThisLevel=0; speedCycle=levelCycle(startLevel); softDrop=false; paused=false;
+    Object.keys(keys).forEach(k => delete keys[k]);
+
+    tiles = loadGroundConfig(startLevel);
+
+    fillQueue();
+    const t = queue.shift();
+    ghost = { type:t.type, rot:t.rot, refl:t.refl };
+    ghost.wx = 0;
+    fallingWy = SPAWN_WY;
+    hardDropping = false;
+    autoDropPreviewKey = null;
+    autoDropPreviewSince = null;
+    lockDelayActive = false; lockDelayStart = 0; lockDelayMoves = 0; lockDelaySnap = null;
+
+    resize(); fitCamera();
+    recomputeLanding(); updateHUD();
+    gameRunning = true;
+    pauseOverlay.hidden = true;
+    paused = false;
+    document.getElementById('overlay').classList.add('hidden');
+    document.getElementById('results-banner').hidden = true;
+    document.getElementById('view-board-btn').hidden = true;
+    setMsg('↑ rotate · snap preview auto-drops after 0.5s', '#94a3b8');
+    if (rafId) cancelAnimationFrame(rafId);
+    lastTime = performance.now();
+    rafId = requestAnimationFrame(gameLoop);
+}
+
+function endGame() {
+    gameRunning=false;
+    clearCompletedVertexHighlight();
+    if (rafId) cancelAnimationFrame(rafId);
+    if (levelFlashTimer) clearTimeout(levelFlashTimer);
+    levelFlash.classList.remove('show');
+    pauseOverlay.hidden = true;
+    paused = false;
+    hardDropping = false;
+    autoDropPreviewKey = null;
+    autoDropPreviewSince = null;
+    // Draw the final state (including the colliding tile) highlighted in red
+    draw();
+    if (ghost) {
+        drawTile(ghost.wx, fallingWy, ghost.rot, ghost.refl, ghost.type,
+                 '#ef444440', '#ef4444', 2.5, 1);
+        ghost=null; landing=null; previewLanding=null;
+    }
+    const newRank = saveScore(score, level, placed);
+    updateBestDisplay();
+
+    const ov=document.getElementById('overlay');
+    ov.classList.remove('hidden');
+    document.getElementById('ov-title').textContent = 'Game Over';
+    document.getElementById('ov-sub').textContent   = `You placed ${placed} tile${placed!==1?'s':''}.`
+        + (newRank === 0 ? ' New best!' : newRank < HS_MAX ? ` Rank #${newRank+1}.` : '');
+    const big=document.getElementById('ov-score');
+    big.textContent=`Score: ${score.toLocaleString()}`; big.style.display='';
+    renderScoreTable(newRank);
+    document.getElementById('ov-btn').textContent='Play Again';
+    document.getElementById('view-board-btn').hidden = false;
+    syncUnlockedLevelInputs();
+}
+
+function updateHUD() {
+    document.getElementById('v-score').textContent  = score;
+    document.getElementById('v-level').textContent  = level;
+    document.getElementById('v-goal').textContent   = `${verticesCompletedThisLevel}/${levelGoal(level)}`;
+}
+function setMsg() {}
+
+// ── Scroll zoom ───────────────────────────────────────────────────────────────
+canvas.addEventListener('wheel', e => {
+    e.preventDefault();
+    const rect=canvas.getBoundingClientRect();
+    const cx=e.clientX-rect.left, cy=e.clientY-rect.top;
+    const s=BS*cam.zoom, wx=(cx-cam.x)/s, wy=(cy-cam.y)/s;
+    cam.zoom=Math.max(0.2, Math.min(5, cam.zoom*(e.deltaY<0?1.1:0.9)));
+    const s2=BS*cam.zoom; cam.x=cx-wx*s2; cam.y=cy-wy*s2;
+    draw();
+}, {passive:false});
+
+document.getElementById('ov-btn').addEventListener('click', () => customGroundTiles ? applyCustomGround() : startGame());
+document.getElementById('view-board-btn').addEventListener('click', () => {
+    document.getElementById('overlay').classList.add('hidden');
+    document.getElementById('results-banner').hidden = false;
+});
+document.getElementById('results-banner').addEventListener('click', () => {
+    document.getElementById('results-banner').hidden = true;
+    document.getElementById('overlay').classList.remove('hidden');
+});
+document.getElementById('ov-level-btn').addEventListener('click', openLevelModal);
+document.getElementById('ov-custom-btn').addEventListener('click', () => {
+    document.getElementById('custom-level-input').click();
+});
+document.getElementById('custom-level-input').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = '';
+    const reader = new FileReader();
+    reader.onload = ev => {
+        try {
+            const data = JSON.parse(ev.target.result);
+            if (data.version !== 1 || !Array.isArray(data.tiles)) throw new Error('Bad format');
+            customGroundTiles = data.tiles;
+            customLevelMode   = typeof data.mode === 'number' ? data.mode : 0;
+            // Pre-select the saved mode in the radio buttons, then show the modal
+            document.querySelector(`#custom-level-modal input[value="${customLevelMode}"]`).checked = true;
+            openCustomLevelModal();
+        } catch { alert('Could not load custom level — invalid file.'); }
+    };
+    reader.readAsText(file);
+});
+document.getElementById('help-trigger-btn').addEventListener('click', e => {
+    e.stopPropagation();
+    openHelpModal();
+});
+document.getElementById('help-close').addEventListener('click', closeHelpModal);
+document.getElementById('help-ok').addEventListener('click', closeHelpModal);
+document.getElementById('level-close').addEventListener('click', closeLevelModal);
+document.getElementById('level-cancel').addEventListener('click', closeLevelModal);
+function updateSaveCustomBtnVisibility() {
+    const visible = customGroundTiles !== null;
+    document.getElementById('ov-save-custom-btn').hidden    = !visible;
+    document.getElementById('pause-save-custom-btn').hidden = !visible;
+}
+
+document.getElementById('ov-save-custom-btn').addEventListener('click', saveCustomLevel);
+document.getElementById('pause-save-custom-btn').addEventListener('click', saveCustomLevel);
+
+const saveFilenameModal = document.getElementById('save-filename-modal');
+document.getElementById('save-filename-close').addEventListener('click',  () => saveFilenameModal.hidden = true);
+document.getElementById('save-filename-cancel').addEventListener('click', () => saveFilenameModal.hidden = true);
+document.getElementById('save-filename-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const name = document.getElementById('save-filename-input').value;
+    saveFilenameModal.hidden = true;
+    doSaveCustomLevel(name);
+});
+
+document.getElementById('pause-resume-btn').addEventListener('click', togglePause);
+document.getElementById('pause-newgame-btn').addEventListener('click', () => {
+    paused = false;
+    endGame();
+});
+topbar.addEventListener('click', () => {
+    if (gameRunning || paused) togglePause();
+});
+levelGrid.addEventListener('click', e => {
+    const btn = e.target.closest('.level-grid-btn');
+    if (!btn || btn.disabled) return;
+    chooseStartLevel(parseInt(btn.dataset.level, 10));
+});
+helpModal.addEventListener('click', e => { if (e.target === helpModal) closeHelpModal(); });
+levelModal.addEventListener('click', e => { if (e.target === levelModal) closeLevelModal(); });
+
+resize(); draw();
+syncUnlockedLevelInputs();
+updateBestDisplay();
+renderScoreTable(-1); // show existing scores on the start screen (no row highlighted)
+</script>
+</body>
+</html>

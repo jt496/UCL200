@@ -1,0 +1,2089 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robinson Triangle Tiling Explorer</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --sidebar-bg: #1e293b;
+            --accent-color: #38bdf8;
+            --text-color: #f8fafc;
+            --tile-thick-color: #4a90d9;
+            --tile-thin-color: #d97a4a;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        [hidden] {
+            display: none !important;
+        }
+
+        html,
+        body {
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        .app {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* ── Sidebar ─────────────────────────────────────────── */
+        .sidebar {
+            width: 300px;
+            flex-shrink: 0;
+            background: var(--sidebar-bg);
+            border-right: 1px solid #334155;
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            gap: 24px;
+            box-shadow: 4px 0 15px rgba(0, 0, 0, 0.3);
+            z-index: 10;
+            overflow-y: auto;
+        }
+
+        .sidebar-title h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin: 0;
+            color: var(--accent-color);
+            letter-spacing: -0.025em;
+        }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .sidebar-nav {
+            margin-bottom: 8px;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #7dd3fc;
+            text-decoration: none;
+            font-size: 0.82rem;
+            line-height: 1.4;
+            opacity: 0.9;
+            transition: opacity 0.2s, color 0.2s;
+        }
+
+        .back-link:hover {
+            color: #bae6fd;
+            opacity: 1;
+        }
+
+        .sidebar-title p {
+            font-size: 0.82em;
+            opacity: 0.75;
+            margin-top: 4px;
+        }
+
+        .sidebar-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .section-heading {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #94a3b8;
+            font-weight: 600;
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .slider-label {
+            font-size: 0.85em;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .slider-label span {
+            font-weight: 700;
+            background: rgba(255, 255, 255, 0.18);
+            padding: 1px 8px;
+            border-radius: 10px;
+            font-size: 0.95em;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(255, 255, 255, 0.25);
+            outline: none;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 1px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        select {
+            width: 100%;
+            background: #334155;
+            color: #e2e8f0;
+            border: 1px solid #a78bfa;
+            border-radius: 6px;
+            padding: 6px 8px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            outline: none;
+        }
+
+        select option {
+            color: #f8fafc;
+            background: #334155;
+        }
+
+        .helper-text {
+            font-size: 0.78em;
+            line-height: 1.45;
+            color: #94a3b8;
+        }
+
+        .button-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            font-size: 0.88em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            background: #334155;
+            color: var(--text-color);
+        }
+
+        .btn:hover {
+            background: #475569;
+            border-color: var(--accent-color);
+            transform: translateY(-1px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        /* .btn-ghost and .btn-solid are subsumed by .btn defaults */
+
+        .btn-solid {
+            background: white;
+            color: #1e293b;
+        }
+
+        .btn-solid:hover {
+            background: #e2e8f0;
+        }
+
+        .btn.active {
+            background: #475569;
+            border-color: var(--accent-color);
+            box-shadow: inset 0 0 0 1px var(--accent-color);
+        }
+
+        /* Legend */
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.85em;
+        }
+
+        .legend-swatch {
+            width: 22px;
+            height: 22px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+
+        .swatch-a1 {
+            background: rgba(217, 122, 74, 0.25);
+            border: 1.5px solid #d97a4a;
+        }
+
+        .swatch-a2 {
+            background: rgba(195, 92, 92, 0.25);
+            border: 1.5px solid #c35c5c;
+        }
+
+        .swatch-b1 {
+            background: rgba(74, 144, 217, 0.25);
+            border: 1.5px solid #4a90d9;
+        }
+
+        .swatch-b2 {
+            background: rgba(90, 117, 214, 0.25);
+            border: 1.5px solid #5a75d6;
+        }
+
+        /* Triangle counts */
+        .count-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85em;
+        }
+
+        .count-row .label {
+            opacity: 0.8;
+        }
+
+        .count-val {
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            background: rgba(255, 255, 255, 0.13);
+            padding: 2px 9px;
+            border-radius: 5px;
+            font-size: 0.95em;
+        }
+
+        .val-a {
+            color: #d97a4a;
+        }
+
+        .val-b {
+            color: #4a90d9;
+        }
+
+        .val-ratio {
+            color: #e0d4ff;
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+        }
+
+        /* ── Canvas ──────────────────────────────────────────── */
+        .canvas-wrapper {
+            flex: 1;
+            background: var(--bg-color);
+            overflow: hidden;
+            position: relative;
+        }
+
+        canvas {
+            display: block;
+            cursor: grab;
+        }
+
+        canvas.dragging {
+            cursor: grabbing;
+        }
+
+        .zoom-hint {
+            position: absolute;
+            bottom: 14px;
+            right: 16px;
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 0.72em;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.72);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            z-index: 100;
+        }
+
+        .modal-card {
+            width: min(720px, 100%);
+            max-height: min(88vh, 900px);
+            overflow-y: auto;
+            background: #152033;
+            border: 1px solid #334155;
+            border-radius: 18px;
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+            padding: 24px;
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+
+        .modal-title {
+            margin: 0;
+            font-size: 1.35rem;
+            color: #e2e8f0;
+        }
+
+        .modal-subtitle {
+            margin: 6px 0 0;
+            font-size: 0.92rem;
+            color: #94a3b8;
+            line-height: 1.5;
+        }
+
+        .modal-close {
+            width: 42px;
+            min-width: 42px;
+            min-height: 42px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            line-height: 1;
+        }
+
+        .help-trigger {
+            justify-content: center;
+            border-color: #38bdf8;
+            color: #7dd3fc;
+        }
+
+        .help-icon-button {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            border-radius: 999px;
+            justify-content: center;
+            font-size: 1rem;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .help-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 14px;
+        }
+
+        .help-card {
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid #334155;
+            background: rgba(15, 23, 42, 0.55);
+        }
+
+        .help-card h3 {
+            margin: 0 0 10px;
+            font-size: 0.95rem;
+            color: #e2e8f0;
+        }
+
+        .help-card p {
+            margin: 0 0 10px;
+            font-size: 0.84rem;
+            color: #94a3b8;
+            line-height: 1.5;
+        }
+
+        .help-list {
+            margin: 0;
+            padding-left: 18px;
+            color: #cbd5e1;
+            font-size: 0.85rem;
+            line-height: 1.65;
+        }
+
+        .help-list li + li {
+            margin-top: 4px;
+        }
+
+        .modal-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+        }
+
+        .modal-action-button {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+            min-height: 110px;
+            text-align: left;
+        }
+
+        .modal-action-button span {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #e2e8f0;
+        }
+
+        .modal-action-button small {
+            font-size: 0.82rem;
+            line-height: 1.5;
+            color: #94a3b8;
+        }
+
+        .filename-form {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .filename-label {
+            font-size: 0.88rem;
+            color: #cbd5e1;
+        }
+
+        .filename-input {
+            width: 100%;
+            background: #334155;
+            color: #e2e8f0;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 0.95rem;
+            outline: none;
+        }
+
+        .filename-input:focus {
+            border-color: var(--accent-color);
+        }
+
+        .filename-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        #toast {
+            position: fixed; bottom: 24px; left: 50%;
+            transform: translateX(-50%) translateY(10px);
+            background: #1e293b; border: 1px solid #334155; border-radius: 8px;
+            padding: 9px 18px; color: #e2e8f0; font-size: 0.88rem;
+            pointer-events: none; opacity: 0; z-index: 200;
+            transition: opacity 0.18s, transform 0.18s;
+        }
+        #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    </style>
+</head>
+
+<body>
+    <div class="app">
+
+        <!-- ── Sidebar ── -->
+        <div class="sidebar">
+            <div class="sidebar-nav">
+                <a href="penrose.html" class="back-link">&larr; Penrose P3 Explorer</a>
+            </div>
+            <div class="sidebar-header">
+                <div class="sidebar-title">
+                    <h1>Robinson Triangle Tiling</h1>
+                    <p>Aperiodic tiling explorer</p>
+                </div>
+                <button id="openHelpBtn" class="btn help-trigger help-icon-button" type="button" aria-label="Open help" title="Help">?</button>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="section-heading">Subdivision</div>
+                <div class="slider-label">
+                    Generation <span id="iterValue">0</span>
+                </div>
+                <input type="range" id="iterations" min="0" max="10" value="0" step="1">
+
+                <div class="slider-label" style="margin-top: 8px;">
+                    Double-click Steps <span id="dblClickStepsValue">3</span>
+                </div>
+                <input type="range" id="dblClickSteps" min="1" max="5" value="3" step="1">
+            </div>
+
+            <div class="sidebar-section">
+                <div class="section-heading">Initial Tiling</div>
+                <select id="seedPreset">
+                    <option value="sun10">Sun (10 Obtuse)</option>
+                    <option value="rhombThin">Thin Rhombus (2 Acute)</option>
+                    <option value="rhombThick" selected>Thick Rhombus (2 Obtuse)</option>
+                    <option value="singleA1">Single A1 Triangle</option>
+                    <option value="singleA2">Single A2 Triangle</option>
+                    <option value="singleB1">Single B1 Triangle</option>
+                    <option value="singleB2">Single B2 Triangle</option>
+                    <option value="fractal">Fractal</option>
+                    <option value="uniform">Uniform</option>
+                    <option value="custom">Custom (Imported/Built)</option>
+                </select>
+                <p id="seedDescription" class="helper-text">
+                    A single P3 thick rhombus made of two obtuse triangles joined along their long base.
+                </p>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="section-heading">View / Load / Export</div>
+                <div class="button-row">
+                    <button class="btn btn-ghost" type="button" onclick="resetView()">Reset</button>
+                    <button class="btn btn-ghost" type="button" onclick="undo()">Undo</button>
+                    <button class="btn btn-ghost" type="button" id="loadP3TilingBtn" onclick="document.getElementById('p3ImportInput').click()">Load Tiling</button>
+                    <button class="btn btn-ghost" type="button" onclick="exportToP3()">Save Tiling</button>
+                    <button class="btn btn-ghost" type="button" id="openExportBtn" onclick="openExportModal()">Export</button>
+                </div>
+                <input type="file" id="p3ImportInput" accept=".json" style="display:none"
+                    onchange="importP3Tiling(event)">
+                <p class="helper-text">Load or save tilings as JSON (compatible with the Penrose P3 explorer). Export renders the current triangle view as `.tikz`, `.pdf`, or `.svg`.</p>
+            </div>
+
+<div class="sidebar-section">
+                <div class="section-heading">Legend</div>
+                <div class="legend-item">
+                    <div class="legend-swatch swatch-a1"></div>
+                    <span>Type A1 &mdash; 36° apex (acute)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-swatch swatch-a2"></div>
+                    <span>Type A2 &mdash; 36° apex (acute)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-swatch swatch-b1"></div>
+                    <span>Type B1 &mdash; 108° apex (obtuse)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-swatch swatch-b2"></div>
+                    <span>Type B2 &mdash; 108° apex (obtuse)</span>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="section-heading">Triangle Counts</div>
+                <div class="count-row">
+                    <span class="label">Red (A1, A2)</span>
+                    <span id="countA" class="count-val val-a">—</span>
+                </div>
+                <div class="count-row">
+                    <span class="label">Blue (B1, B2)</span>
+                    <span id="countB" class="count-val val-b">—</span>
+                </div>
+                <div class="count-row">
+                    <span class="label">Blue / Red</span>
+                    <span id="countRatio" class="count-val val-ratio">—</span>
+                </div>
+            </div>
+
+            <div class="sidebar-footer" style="font-size:0.75rem;color:#94a3b8;opacity:0.8;line-height:1.4;">
+                Built with the help of AI
+            </div>
+
+        </div>
+
+        <!-- ── Canvas ── -->
+        <div class="canvas-wrapper" id="canvasWrapper">
+            <canvas id="canvas"></canvas>
+            <div class="zoom-hint">Scroll to zoom &middot; Drag to pan</div>
+        </div>
+    </div>
+
+    <div id="exportModal" class="modal-overlay" hidden>
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="exportModalTitle">
+            <div class="modal-header">
+                <div>
+                    <h2 id="exportModalTitle" class="modal-title">Export</h2>
+                    <p class="modal-subtitle">Choose a format to export the current triangle tiling.</p>
+                </div>
+                <button id="closeExportBtn" class="btn modal-close" type="button" aria-label="Close export" onclick="closeExportModal()">×</button>
+            </div>
+
+            <div class="modal-actions">
+                <button id="exportTikzBtn" class="btn modal-action-button" type="button" onclick="closeExportModal(); exportTikz()">
+                    <span>Export `.tikz`</span>
+                    <small>Downloads a `.tikz` file for the current triangle layout.</small>
+                </button>
+                <button id="exportPdfBtn" class="btn modal-action-button" type="button" onclick="closeExportModal(); exportPdf()">
+                    <span>Export `.pdf`</span>
+                    <small>Downloads a fitted PDF snapshot of the current tiling.</small>
+                </button>
+                <button id="exportSvgBtn" class="btn modal-action-button" type="button" onclick="closeExportModal(); exportSvg()">
+                    <span>Export `.svg`</span>
+                    <small>Downloads a scalable vector SVG of the current triangle layout.</small>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="helpModal" class="modal-overlay" hidden>
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="helpModalTitle">
+            <div class="modal-header">
+                <div>
+                    <h2 id="helpModalTitle" class="modal-title">Explorer Help</h2>
+                    <p class="modal-subtitle">A quick guide to the Robinson triangle explorer.</p>
+                </div>
+                <button id="closeHelpBtn" class="btn modal-close" type="button" aria-label="Close help">×</button>
+            </div>
+
+            <div class="help-grid">
+                <section class="help-card">
+                    <h3>Move Around</h3>
+                    <ul class="help-list">
+                        <li>Scroll to zoom in and out around the cursor.</li>
+                        <li>Drag the canvas to pan around the tiling.</li>
+                        <li>Double-click a triangle to subdivide it by the current double-click step count.</li>
+                    </ul>
+                </section>
+
+                <section class="help-card">
+                    <h3>Initial Tilings</h3>
+                    <ul class="help-list">
+                        <li>Choose a seed in the Initial Tiling dropdown to start from a sun, a rhombus, or a single triangle.</li>
+                        <li>The subdivision slider regenerates the current seed at the chosen level.</li>
+                        <li>Manual edits switch the page to the Custom seed so your current tiling becomes the working base.</li>
+                    </ul>
+                </section>
+
+                <section class="help-card">
+                    <h3>Load From P3</h3>
+                    <ul class="help-list">
+                        <li><strong>Load P3 Tiling</strong> imports JSON exported from the Penrose P3 explorer.</li>
+                        <li>The imported half-tiles are converted into Robinson triangles for subdivision and viewing here.</li>
+                    </ul>
+                </section>
+
+                <section class="help-card">
+                    <h3>Export</h3>
+                    <ul class="help-list">
+                        <li><strong>Export</strong> lets you download the current triangle layout as <code>.tikz</code>, <code>.pdf</code>, or <code>.svg</code>.</li>
+                    </ul>
+                </section>
+
+                <section class="help-card">
+                    <h3>Keyboard Shortcuts</h3>
+                    <ul class="help-list">
+                        <li><kbd>Ctrl</kbd> + <kbd>S</kbd> save tiling as `.json`.</li>
+                        <li><kbd>Ctrl</kbd> + <kbd>L</kbd> load a `.json` tiling from disk.</li>
+                        <li><kbd>Ctrl</kbd> + <kbd>E</kbd> open export — download as `.tikz`, `.pdf`, or `.svg`.</li>
+                        <li><kbd>Ctrl</kbd> + <kbd>Z</kbd> / <kbd>Cmd</kbd> + <kbd>Z</kbd> undo.</li>
+                        <li><kbd>Ctrl</kbd> + <kbd>Y</kbd> redo.</li>
+                    </ul>
+                </section>
+
+                <section class="help-card">
+                    <h3>References</h3>
+                    <p>B. Grunbaum and G. C. Shephard, <em>Tilings and Patterns</em>, W. H. Freeman and Company, New York, 1987.</p>
+                    <p>R. Penrose, <em>The role of aesthetics in pure and applied mathematical research</em>, Bulletin of the Institute of Mathematics and its Applications, vol. 10, pp. 266-271, 1974.</p>
+                    <p>R. Penrose, <em>Pentaplexity: A class of non-periodic tilings of the plane</em>, The Mathematical Intelligencer, vol. 2, no. 1, pp. 32-37, 1979.</p>
+                    <p>R. M. Robinson, <em>Undecidability and nonperiodicity for tilings of the plane</em>, Inventiones Mathematicae, vol. 12, no. 3, pp. 177-209, 1971.</p>
+                </section>
+            </div>
+        </div>
+    </div>
+
+    <div id="filenameModal" class="modal-overlay" hidden>
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="filenameModalTitle">
+            <div class="modal-header">
+                <div>
+                    <h2 id="filenameModalTitle" class="modal-title">Save File</h2>
+                    <p id="filenameModalSubtitle" class="modal-subtitle">Choose a file name.</p>
+                </div>
+                <button class="btn modal-close" type="button" aria-label="Close filename dialog" onclick="closeFilenameModal()">×</button>
+            </div>
+
+            <form id="filenameForm" class="filename-form">
+                <label class="filename-label" for="filenameInput">File name</label>
+                <input id="filenameInput" class="filename-input" type="text" autocomplete="off">
+                <div class="filename-actions">
+                    <button class="btn btn-ghost" type="button" onclick="closeFilenameModal()">Cancel</button>
+                    <button class="btn btn-solid" type="submit">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <script>
+        let canvas = document.getElementById('canvas');
+        let ctx = canvas.getContext('2d');
+        const wrapper = document.getElementById('canvasWrapper');
+        const helpModal = document.getElementById('helpModal');
+        const openHelpBtn = document.getElementById('openHelpBtn');
+        const closeHelpBtn = document.getElementById('closeHelpBtn');
+        const exportModal = document.getElementById('exportModal');
+        const openExportBtn = document.getElementById('openExportBtn');
+        const filenameModal = document.getElementById('filenameModal');
+        const filenameModalTitle = document.getElementById('filenameModalTitle');
+        const filenameModalSubtitle = document.getElementById('filenameModalSubtitle');
+        const filenameInput = document.getElementById('filenameInput');
+        const filenameForm = document.getElementById('filenameForm');
+
+        const PHI = (1 + Math.sqrt(5)) / 2;
+        const TYPE_A1 = 'A1';
+        const TYPE_A2 = 'A2';
+        const TYPE_B1 = 'B1';
+        const TYPE_B2 = 'B2';
+        const ACUTE_ANGLE = Math.PI / 5;
+        const OBTUSE_ANGLE = (3 * Math.PI) / 5;
+        const DEFAULT_SIZE = 200;
+        const P3_SCALE_FACTOR = 200;
+        const P3_A36 = Math.PI / 5;
+        const P3_A72 = 2 * Math.PI / 5;
+        const P3_TEMPLATES = {
+            'thick-half': [[0, 0], [1, 0], [1 + Math.cos(P3_A72), -Math.sin(P3_A72)]],
+            'thin-half': [[0, 0], [1, 0], [Math.cos(P3_A36), -Math.sin(P3_A36)]]
+        };
+
+        const seedDescriptions = {
+            sun10: 'A five-rhombus sun of thick rhombuses meeting at their 72° vertices.',
+            rhombThin: 'A single P3 thin rhombus made of two acute triangles joined along their short base.',
+            rhombThick: 'A single P3 thick rhombus made of two obtuse triangles joined along their long base.',
+            singleA1: 'One A1 acute triangle, useful for seeing the substitution rules in isolation.',
+            singleA2: 'One A2 acute triangle, useful for seeing the substitution rules in isolation.',
+            singleB1: 'One B1 obtuse triangle, showing the alternate substitution branch from the start.',
+            singleB2: 'One B2 obtuse triangle, showing the alternate substitution branch from the start.',
+            custom: 'Your own starter set. Add tiles with placement mode and subdivide from there.'
+        };
+
+        const TRIANGLE_COLORS = {
+            [TYPE_A1]: { fill: 'rgba(217, 122, 74, 0.25)', stroke: '#d97a4a' },
+            [TYPE_A2]: { fill: 'rgba(195, 92, 92, 0.25)', stroke: '#c35c5c' },
+            [TYPE_B1]: { fill: 'rgba(74, 144, 217, 0.25)', stroke: '#4a90d9' },
+            [TYPE_B2]: { fill: 'rgba(90, 117, 214, 0.25)', stroke: '#5a75d6' }
+        };
+
+        let triangles = [];
+        let customTriangles = [];
+        let fractalTriangles = [];
+        let uniformTriangles = [];
+        let offsetX = 0;
+        let offsetY = 0;
+        let scale = 1;
+        let isDragging = false;
+        let dragStartX = 0;
+        let dragStartY = 0;
+        let pointerDragged = false;
+        let pendingFileAction = null;
+        let lastFilenameTrigger = null;
+
+        // ── Undo state ──────────────────────────────────────────────────────────────
+        const undoStack = [];
+        const redoStack = [];
+        const MAX_UNDO = 50;
+
+        function captureState() {
+            return {
+                customTriangles: customTriangles.map(cloneTriangle),
+                lastLoadedSeed: JSON.parse(JSON.stringify(lastLoadedSeed)),
+                seedPreset: document.getElementById('seedPreset').value,
+                iterations: document.getElementById('iterations').value
+            };
+        }
+
+        function applyState(state) {
+            customTriangles = state.customTriangles.map(cloneTriangle);
+            lastLoadedSeed = JSON.parse(JSON.stringify(state.lastLoadedSeed));
+            document.getElementById('seedPreset').value = state.seedPreset;
+            document.getElementById('iterations').value = state.iterations;
+            document.getElementById('iterValue').textContent = state.iterations;
+            regenerate();
+        }
+
+        function pushUndo() {
+            undoStack.push(captureState());
+            if (undoStack.length > MAX_UNDO) undoStack.shift();
+            redoStack.length = 0;
+        }
+
+        function undo() {
+            if (undoStack.length === 0) return;
+            redoStack.push(captureState());
+            const state = undoStack.pop();
+            applyState(state);
+        }
+
+        function redo() {
+            if (redoStack.length === 0) return;
+            undoStack.push(captureState());
+            if (undoStack.length > MAX_UNDO) undoStack.shift();
+            const state = redoStack.pop();
+            applyState(state);
+        }
+
+        // Track the "last explicitly loaded" state for the Reset button
+        let lastLoadedSeed = { type: 'preset', value: 'rhombThick' };
+
+        // ── Triangle class ───────────────────────────────────────
+
+        class Triangle {
+            constructor(p1, p2, p3, type) {
+                this.p1 = p1; this.p2 = p2; this.p3 = p3; this.type = type;
+            }
+
+            subdivide() {
+                const r = [];
+                if (this.type === TYPE_A1) {
+                    // p1: 36 apex, p2, p3: 72 base
+                    // Acute A1 splits leg p1-p3
+                    const D = lerp(this.p1, this.p3, 1 / PHI);
+                    r.push(new Triangle(D, this.p1, this.p2, TYPE_B2));
+                    r.push(new Triangle(this.p2, this.p3, D, TYPE_A1));
+                } else if (this.type === TYPE_A2) {
+                    const D = lerp(this.p1, this.p3, 1 / PHI);
+                    r.push(new Triangle(D, this.p1, this.p2, TYPE_B1));
+                    r.push(new Triangle(this.p2, this.p3, D, TYPE_A2));
+                } else if (this.type === TYPE_B1) {
+                    // Obtuse B1: long base p2-p3, short legs p1-p2, p1-p3
+                    const F = lerp(this.p2, this.p3, 1 / (PHI * PHI));
+                    const D = lerp(this.p3, this.p1, 1 / PHI);
+                    r.push(new Triangle(F, this.p1, this.p2, TYPE_B1));
+                    r.push(new Triangle(D, this.p3, F, TYPE_B2));
+                    r.push(new Triangle(F, this.p1, D, TYPE_A1));
+                } else if (this.type === TYPE_B2) {
+                    // Obtuse B2: mirror of B1
+                    const F = lerp(this.p2, this.p3, 1 / (PHI * PHI));
+                    const D = lerp(this.p3, this.p1, 1 / PHI);
+                    r.push(new Triangle(F, this.p1, this.p2, TYPE_B2));
+                    r.push(new Triangle(D, this.p3, F, TYPE_B1));
+                    r.push(new Triangle(F, this.p1, D, TYPE_A2));
+                }
+                return r;
+            }
+
+            draw() {
+                const cx = canvas.width / 2 + offsetX;
+                const cy = canvas.height / 2 + offsetY;
+                const sx1 = cx + this.p1.x * scale, sy1 = cy + this.p1.y * scale;
+                const sx2 = cx + this.p2.x * scale, sy2 = cy + this.p2.y * scale;
+                const sx3 = cx + this.p3.x * scale, sy3 = cy + this.p3.y * scale;
+                // Viewport cull — skip if bounding box is entirely outside the canvas.
+                const minX = Math.min(sx1, sx2, sx3), maxX = Math.max(sx1, sx2, sx3);
+                const minY = Math.min(sy1, sy2, sy3), maxY = Math.max(sy1, sy2, sy3);
+                if (maxX < 0 || minX > canvas.width || maxY < 0 || minY > canvas.height) return;
+                ctx.beginPath();
+                ctx.moveTo(sx1, sy1);
+                ctx.lineTo(sx2, sy2);
+                ctx.lineTo(sx3, sy3);
+                ctx.closePath();
+                const palette = TRIANGLE_COLORS[this.type];
+                ctx.fillStyle = palette.fill;
+                ctx.strokeStyle = palette.stroke;
+                ctx.lineWidth = 1.5;
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            contains(p) {
+                const sign = (p1, p2, p3) => (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
+                const d1 = sign(p, this.p1, this.p2);
+                const d2 = sign(p, this.p2, this.p3);
+                const d3 = sign(p, this.p3, this.p1);
+                const has_neg = (d1 < 0) || (d2 < 0) || (d3 < 0);
+                const has_pos = (d1 > 0) || (d2 > 0) || (d3 > 0);
+                return !(has_neg && has_pos);
+            }
+        }
+
+        function lerp(a, b, t) {
+            return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+        }
+
+        function clonePoint(p) {
+            return { x: p.x, y: p.y };
+        }
+
+        function cloneTriangle(triangle) {
+            return new Triangle(
+                clonePoint(triangle.p1),
+                clonePoint(triangle.p2),
+                clonePoint(triangle.p3),
+                triangle.type
+            );
+        }
+
+        function triangleToData(triangle) {
+            return {
+                type: triangle.type,
+                p1: clonePoint(triangle.p1),
+                p2: clonePoint(triangle.p2),
+                p3: clonePoint(triangle.p3)
+            };
+        }
+
+        function transformedP3Verts(type, wx, wy, rotation, reflection, scaleFactor = P3_SCALE_FACTOR) {
+            const template = P3_TEMPLATES[type];
+            const theta = rotation * P3_A36;
+            const cos = Math.cos(theta);
+            const sin = Math.sin(theta);
+            return template.map(([tx, ty]) => {
+                const ry = ty * reflection;
+                return {
+                    x: (tx * cos - ry * sin + wx) * scaleFactor,
+                    y: (tx * sin + ry * cos + wy) * scaleFactor
+                };
+            });
+        }
+
+        function createTriangleFromApex(apex, direction, sideLength, type) {
+            const isAcute = (type === TYPE_A1 || type === TYPE_A2);
+            const halfAngle = (isAcute ? ACUTE_ANGLE : OBTUSE_ANGLE) / 2;
+            return new Triangle(
+                clonePoint(apex),
+                {
+                    x: apex.x + Math.cos(direction - halfAngle) * sideLength,
+                    y: apex.y + Math.sin(direction - halfAngle) * sideLength
+                },
+                {
+                    x: apex.x + Math.cos(direction + halfAngle) * sideLength,
+                    y: apex.y + Math.sin(direction + halfAngle) * sideLength
+                },
+                type
+            );
+        }
+
+        function createRadialTriangle(center, angle, radius, type) {
+            return createTriangleFromApex(center, angle, radius, type);
+        }
+
+        function createRhombTiles(axisStart, axisEnd, baseType) {
+            const isAcute = (baseType === 'A');
+            const center = { x: (axisStart.x + axisEnd.x) / 2, y: (axisStart.y + axisEnd.y) / 2 };
+            const dx = axisEnd.x - axisStart.x;
+            const dy = axisEnd.y - axisStart.y;
+            const dist = Math.hypot(dx, dy);
+            const angle = Math.atan2(dy, dx);
+
+            // Height from base center to apex.
+            // For Acute: apex is 36, base angles are 72. h = (base/2) * tan(72).
+            // For Obtuse: apex is 108, base angles are 36. h = (base/2) * tan(36).
+            const h = isAcute
+                ? (dist / 2) * Math.tan(72 * Math.PI / 180)
+                : (dist / 2) * Math.tan(36 * Math.PI / 180);
+
+            const apex1 = {
+                x: center.x - Math.sin(angle) * h,
+                y: center.y + Math.cos(angle) * h
+            };
+            const apex2 = {
+                x: center.x + Math.sin(angle) * h,
+                y: center.y - Math.cos(angle) * h
+            };
+
+            return [
+                new Triangle(apex1, axisStart, axisEnd, isAcute ? TYPE_A1 : TYPE_B1),
+                new Triangle(apex2, axisStart, axisEnd, isAcute ? TYPE_A2 : TYPE_B2)
+            ];
+        }
+
+        function makeSunSeed(count, radius) {
+            // Sun: 5 Thick Rhombuses (10 Obtuse triangles) meeting at their 72° vertices.
+            // Each rhombus is made of two B-triangles (B1, B2) joined at their long base.
+            const seed = [];
+            const baseLen = radius * PHI;
+            for (let i = 0; i < 5; i++) {
+                const angle = (i * 2 * Math.PI) / 5;
+                const axisStart = { x: 0, y: 0 };
+                const axisEnd = { x: Math.cos(angle) * baseLen, y: Math.sin(angle) * baseLen };
+                seed.push(...createRhombTiles(axisStart, axisEnd, 'B'));
+            }
+            return seed;
+        }
+        function makeRhombSeed(type) {
+            // P3 Thin Rhomb (2 Acute) has side L and short base L/PHI.
+            // P3 Thick Rhomb (2 Obtuse) has side L and long base L*PHI.
+            if (type === 'A') {
+                const baseLen = DEFAULT_SIZE / PHI;
+                return createRhombTiles({ x: -baseLen / 2, y: 0 }, { x: baseLen / 2, y: 0 }, 'A');
+            } else {
+                const baseLen = DEFAULT_SIZE * PHI;
+                return createRhombTiles({ x: -baseLen / 2, y: 0 }, { x: baseLen / 2, y: 0 }, 'B');
+            }
+        }
+
+        function convertP3DataToTriangles(data) {
+            if (data.version !== 1 || !data.tiles) {
+                throw new Error('Unrecognized P3 Explorer file format.');
+            }
+
+            let sourceTiles = data.tiles || [];
+
+            // If no tiles are placed but supertile definitions exist, expand the first one.
+            if (sourceTiles.length === 0 && data.supertileDefs && data.supertileDefs.length > 0) {
+                const def = data.supertileDefs[0];
+                sourceTiles = def.tileData.map(td => ({
+                    ...td,
+                    wx: td.relWx || 0,
+                    wy: td.relWy || 0
+                }));
+                console.log(`Importing supertile definition: ${def.name}`);
+            }
+
+            const newTriangles = [];
+
+            for (const td of sourceTiles) {
+                const template = {
+                    thick: [[0, 0], [1, 0], [1 + Math.cos(P3_A72), -Math.sin(P3_A72)], [Math.cos(P3_A72), -Math.sin(P3_A72)]],
+                    thin: [[0, 0], [1, 0], [1 + Math.cos(P3_A36), -Math.sin(P3_A36)], [Math.cos(P3_A36), -Math.sin(P3_A36)]],
+                    'thick-half': [[0, 0], [1, 0], [1 + Math.cos(P3_A72), -Math.sin(P3_A72)]],
+                    'thin-half': [[0, 0], [1, 0], [Math.cos(P3_A36), -Math.sin(P3_A36)]]
+                }[td.type];
+                if (!template) continue;
+
+                const theta = td.rotation * P3_A36;
+                const cos = Math.cos(theta);
+                const sin = Math.sin(theta);
+                const wx = td.wx !== undefined ? td.wx : (td.relWx || 0);
+                const wy = td.wy !== undefined ? td.wy : (td.relWy || 0);
+
+                const verts = template.map(([tx, ty]) => {
+                    const ry = ty * td.reflection;
+                    return {
+                        x: (tx * cos - ry * sin + wx) * P3_SCALE_FACTOR,
+                        y: (tx * sin + ry * cos + wy) * P3_SCALE_FACTOR
+                    };
+                });
+
+                if (td.type === 'thick') {
+                    newTriangles.push(...createRhombTiles(verts[2], verts[0], 'B'));
+                } else if (td.type === 'thin') {
+                    newTriangles.push(...createRhombTiles(verts[3], verts[1], 'A'));
+                } else if (td.type === 'thick-half') {
+                    const triType = td.reflection === 1 ? TYPE_B1 : TYPE_B2;
+                    newTriangles.push(new Triangle(verts[1], verts[2], verts[0], triType));
+                } else if (td.type === 'thin-half') {
+                    const triType = td.reflection === 1 ? TYPE_A1 : TYPE_A2;
+                    newTriangles.push(new Triangle(verts[0], verts[2], verts[1], triType));
+                }
+            }
+
+            return newTriangles;
+        }
+
+        function importP3Tiling(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            pushUndo();
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    // If the file was saved by robinson.html it carries the original
+                    // triangle data directly — restore that instead of converting P3 tiles.
+                    let newTriangles;
+                    if (data.robinsonTriangles && data.robinsonTriangles.length > 0) {
+                        newTriangles = data.robinsonTriangles.map(
+                            d => new Triangle(d.p1, d.p2, d.p3, d.type)
+                        );
+                    } else {
+                        newTriangles = convertP3DataToTriangles(data);
+                    }
+                    if (newTriangles.length > 0) {
+                        customTriangles = newTriangles;
+                        lastLoadedSeed = { type: 'custom', triangles: newTriangles.map(cloneTriangle) };
+                        const seedSelect = document.getElementById('seedPreset');
+                        seedSelect.value = 'custom';
+                        resetView();
+                        showToast('Tiling loaded.');
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert(err.message === 'Unrecognized P3 Explorer file format.' ? err.message : 'Error parsing P3 tiling.');
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // Reset input
+        }
+
+        function downloadFile(filename, content, mimeType = 'text/plain') {
+            console.log('[robinson] downloadFile called', { filename, mimeType, size: typeof content === 'string' ? content.length : content?.length });
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.style.display = 'none';
+            console.log('[robinson] clicking download link', { filename, url });
+            document.body.appendChild(a);
+            a.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+
+        function requestFilename({ title, subtitle, defaultName, onConfirm }) {
+            pendingFileAction = onConfirm;
+            filenameModalTitle.textContent = title;
+            filenameModalSubtitle.textContent = subtitle;
+            filenameInput.value = defaultName;
+            filenameModal.hidden = false;
+            setTimeout(() => {
+                filenameInput.focus();
+                filenameInput.select();
+            }, 0);
+        }
+
+        function closeFilenameModal() {
+            filenameModal.hidden = true;
+            pendingFileAction = null;
+            if (lastFilenameTrigger && typeof lastFilenameTrigger.focus === 'function') {
+                lastFilenameTrigger.focus();
+            }
+        }
+
+        function openExportModal() {
+            console.log('[robinson] openExportModal called');
+            exportModal.hidden = false;
+            document.getElementById('exportTikzBtn').focus();
+        }
+
+        function openHelpModal() {
+            helpModal.hidden = false;
+            closeHelpBtn.focus();
+        }
+
+        function closeHelpModal() {
+            helpModal.hidden = true;
+            openHelpBtn.focus();
+        }
+
+        function closeExportModal() {
+            console.log('[robinson] closeExportModal called');
+            exportModal.hidden = true;
+            openExportBtn.focus();
+        }
+
+        // ── Export to P3 ──────────────────────────────────────────────────────────
+
+        /**
+         * Subdivide all triangles until they share the same minimum edge length,
+         * so that the tiling can be cleanly converted to paired P3 rhombuses.
+         */
+        function normalizeToSameGeneration(srcTriangles) {
+            if (srcTriangles.length === 0) return [];
+
+            // Measure "side" of each triangle as |p1-p2| (the equal legs for both types).
+            let minSide = Infinity;
+            for (const t of srcTriangles) {
+                const s = Math.hypot(t.p2.x - t.p1.x, t.p2.y - t.p1.y);
+                if (s < minSide) minSide = s;
+            }
+
+            // Subdivide any triangle whose side is more than √PHI times the minimum.
+            const threshold = minSide * Math.sqrt(PHI);
+            const result = [];
+            function recurse(t, depth) {
+                if (depth > 25) { result.push(t); return; }
+                const s = Math.hypot(t.p2.x - t.p1.x, t.p2.y - t.p1.y);
+                if (s > threshold) {
+                    for (const child of t.subdivide()) recurse(child, depth + 1);
+                } else {
+                    result.push(t);
+                }
+            }
+            for (const t of srcTriangles) recurse(t, 0);
+            return result;
+        }
+
+        /**
+         * Pair A1+A2 and B1+B2 triangles that share their p2-p3 edge.
+         * Returns { pairs: [[t1,t2], …], unpaired: [t, …] }.
+         */
+        function pairTrianglesForP3(srcTriangles, eps) {
+            function ptEq(a, b) {
+                return Math.abs(a.x - b.x) < eps && Math.abs(a.y - b.y) < eps;
+            }
+            function edgeShared(ti, tj) {
+                return (ptEq(ti.p2, tj.p2) && ptEq(ti.p3, tj.p3)) ||
+                       (ptEq(ti.p2, tj.p3) && ptEq(ti.p3, tj.p2));
+            }
+            const COMPLEMENT = {
+                [TYPE_A1]: TYPE_A2, [TYPE_A2]: TYPE_A1,
+                [TYPE_B1]: TYPE_B2, [TYPE_B2]: TYPE_B1
+            };
+
+            // Build a spatial bucket map keyed by rounded midpoint of the p2-p3 edge,
+            // so each triangle only searches among its local neighbours (O(n) total).
+            const cellSize = eps * 10;
+            function edgeKey(t) {
+                const mx = (t.p2.x + t.p3.x) / 2;
+                const my = (t.p2.y + t.p3.y) / 2;
+                return `${Math.round(mx / cellSize)},${Math.round(my / cellSize)}`;
+            }
+            const buckets = new Map();
+            for (let i = 0; i < srcTriangles.length; i++) {
+                const key = edgeKey(srcTriangles[i]);
+                if (!buckets.has(key)) buckets.set(key, []);
+                buckets.get(key).push(i);
+            }
+
+            const used = new Set();
+            const pairs = [], unpaired = [];
+            for (let i = 0; i < srcTriangles.length; i++) {
+                if (used.has(i)) continue;
+                const ti = srcTriangles[i];
+                const need = COMPLEMENT[ti.type];
+                const candidates = buckets.get(edgeKey(ti)) || [];
+                let found = false;
+                for (const j of candidates) {
+                    if (j <= i || used.has(j) || srcTriangles[j].type !== need) continue;
+                    if (edgeShared(ti, srcTriangles[j])) {
+                        pairs.push([ti, srcTriangles[j]]);
+                        used.add(i); used.add(j);
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) unpaired.push(ti);
+            }
+            return { pairs, unpaired };
+        }
+
+        /**
+         * Convert a paired (A1,A2) or (B1,B2) triangle into a P3 tile descriptor.
+         * sideLen: the |p1-p2| edge length of the normalized triangles.
+         *
+         * Derivation (verified against convertP3DataToTriangles round-trip):
+         *   thin  rhombus: A1.p1=V0, A1.p3=V1, A1.p2=V3
+         *   thick rhombus: B1.p3=V0, B2.p1=V1, B1.p1=V3
+         * Reflection: sign of cross product (V1-V0)×(V3-V0).
+         */
+        function pairToP3Tile(t1, t2, sideLen) {
+            const isAcute = (t1.type === TYPE_A1 || t1.type === TYPE_A2);
+            let V0, V1, V3;
+
+            if (isAcute) {
+                const a1 = (t1.type === TYPE_A1) ? t1 : t2;
+                V0 = a1.p1; V1 = a1.p3; V3 = a1.p2;
+            } else {
+                const b1 = (t1.type === TYPE_B1) ? t1 : t2;
+                const b2 = (t1.type === TYPE_B2) ? t1 : t2;
+                V0 = b1.p3; V1 = b2.p1; V3 = b1.p1;
+            }
+
+            const wx = V0.x / sideLen;
+            const wy = V0.y / sideLen;
+            const theta = Math.atan2(V1.y - V0.y, V1.x - V0.x);
+            const rotation = ((Math.round(theta / (Math.PI / 5)) % 10) + 10) % 10;
+            const cross = (V1.x - V0.x) * (V3.y - V0.y) - (V1.y - V0.y) * (V3.x - V0.x);
+            const reflection = cross < 0 ? 1 : -1;
+
+            return {
+                type: isAcute ? 'thin' : 'thick',
+                wx, wy, rotation, reflection,
+                color: isAcute ? '#d97a4a' : '#4a90d9',
+                groupId: null
+            };
+        }
+
+        /**
+         * Convert an unpaired triangle into a P3 half-tile descriptor.
+         *
+         * Vertex mapping (from convertP3DataToTriangles round-trip):
+         *   thin-half:  V0=t.p1, V1=t.p3, third=t.p2
+         *   thick-half: V0=t.p3, V1=t.p1, third=t.p2
+         *
+         * Reflection is determined geometrically (cross product of V0→V1 and V0→third),
+         * because Robinson subdivision can flip the orientation of A1/B1 triangles relative
+         * to the P3 template handedness.  Fixing reflection=1 for A1 and reflection=-1 for A2
+         * (or vice-versa for B) is wrong for triangles that arose from B-type subdivision.
+         */
+        function singleToP3HalfTile(t, sideLen) {
+            const isAcute = (t.type === TYPE_A1 || t.type === TYPE_A2);
+            const V0    = isAcute ? t.p1 : t.p3;
+            const V1    = isAcute ? t.p3 : t.p1;
+            const third = t.p2;   // the "apex" vertex not on the V0-V1 edge
+
+            const wx = V0.x / sideLen;
+            const wy = V0.y / sideLen;
+            const theta = Math.atan2(V1.y - V0.y, V1.x - V0.x);
+            const rotation = ((Math.round(theta / (Math.PI / 5)) % 10) + 10) % 10;
+
+            // Match the same sign convention used in pairToP3Tile:
+            // cross < 0  →  third is clockwise (right) of V0→V1  →  reflection = 1
+            const cross = (V1.x - V0.x) * (third.y - V0.y) - (V1.y - V0.y) * (third.x - V0.x);
+            const reflection = cross < 0 ? 1 : -1;
+
+            return {
+                type: isAcute ? 'thin-half' : 'thick-half',
+                wx, wy, rotation, reflection,
+                color: isAcute ? '#c4763a' : '#4a7ab5',
+                groupId: null
+            };
+        }
+
+        const EXPORT_MAX_TILES = 20000;
+
+        // Estimate how many triangles normalizeToSameGeneration would produce,
+        // without actually running it.  Each subdivision step produces 2–3 children,
+        // so the count grows as PHI² ≈ 2.618 per step → n steps ≈ PHI^(2n) per triangle.
+        // Mirrors the sqrt(PHI) threshold used in normalizeToSameGeneration so that
+        // triangles already at the finest generation contribute exactly 1 to the count.
+        function estimateNormalizedCount(srcTriangles, minSide) {
+            const sqrtPhi = Math.sqrt(PHI);
+            let count = 0;
+            for (const t of srcTriangles) {
+                const s = Math.hypot(t.p2.x - t.p1.x, t.p2.y - t.p1.y);
+                const ratio = s / minSide;
+                const n = ratio <= sqrtPhi ? 0 : Math.ceil(Math.log(ratio) / Math.log(PHI));
+                count += Math.round(Math.pow(PHI * PHI, n));
+            }
+            return count;
+        }
+
+        function exportToP3() {
+            if (triangles.length === 0) {
+                alert('No triangles to export.');
+                return;
+            }
+
+            // Find the finest (smallest) side length present.
+            let minSide = Infinity;
+            for (const t of triangles) {
+                const s = Math.hypot(t.p2.x - t.p1.x, t.p2.y - t.p1.y);
+                if (s < minSide) minSide = s;
+            }
+
+            // Identify triangles that are already at the finest generation.
+            const threshold = minSide * Math.sqrt(PHI);
+            const finestOnly = triangles.filter(t => {
+                const s = Math.hypot(t.p2.x - t.p1.x, t.p2.y - t.p1.y);
+                return s <= threshold;
+            });
+            const dropped = triangles.length - finestOnly.length;
+
+            const estimated = estimateNormalizedCount(triangles, minSide);
+            let normalized;
+
+            if (dropped > 0 && estimated > EXPORT_MAX_TILES) {
+                // Too many tiles would result and there are genuinely coarser tiles.
+                // Warn and keep only the triangles already at the finest generation.
+                normalized = finestOnly;
+                alert(
+                    `Normalising everything to the finest generation would produce ` +
+                    `~${estimated.toLocaleString()} triangles (limit is ${EXPORT_MAX_TILES.toLocaleString()}).\n\n` +
+                    `The file will be saved with only the ${normalized.length.toLocaleString()} triangle` +
+                    `${normalized.length !== 1 ? 's' : ''} already at the finest generation ` +
+                    `(${dropped.toLocaleString()} coarser tile${dropped !== 1 ? 's' : ''} omitted).\n\n` +
+                    `Note: reloading in this page will still reproduce the full original tiling.` 
+                );
+                if (normalized.length === 0) return;
+            } else {
+                // Normal path: subdivide all tiles to the finest generation.
+                normalized = normalizeToSameGeneration(triangles);
+                if (normalized.length > EXPORT_MAX_TILES) {
+                    const proceed = confirm(
+                        `This tiling has ${normalized.length.toLocaleString()} triangles at the finest ` +
+                        `generation, which will result in a large file ` +
+                        `(limit is ${EXPORT_MAX_TILES.toLocaleString()}).\n\nSave anyway?`
+                    );
+                    if (!proceed) return;
+                }
+            }
+
+            // Compute reference side length from any normalized triangle
+            const sideLen = Math.hypot(
+                normalized[0].p2.x - normalized[0].p1.x,
+                normalized[0].p2.y - normalized[0].p1.y
+            );
+
+            // Pair and convert
+            const { pairs, unpaired } = pairTrianglesForP3(normalized, sideLen * 0.01);
+            const p3Tiles = [
+                ...pairs.map(([t1, t2]) => pairToP3Tile(t1, t2, sideLen)),
+                ...unpaired.map(t => singleToP3HalfTile(t, sideLen))
+            ].filter(Boolean);
+
+            if (p3Tiles.length === 0) {
+                alert('No P3 tiles could be generated.');
+                return;
+            }
+
+            const nPaired   = pairs.length;
+            const nUnpaired = unpaired.length;
+            const subtitle  = `${p3Tiles.length} tile${p3Tiles.length !== 1 ? 's' : ''} ` +
+                              `(${nPaired} rhombus${nPaired !== 1 ? 'es' : ''}, ` +
+                              `${nUnpaired} half-tile${nUnpaired !== 1 ? 's' : ''})`;
+
+            const data = {
+                version: 1,
+                tiles: p3Tiles,
+                supertileDefs: [],
+                nextGroupId: 1,
+                // Original Robinson triangles — used when reloading in robinson.html.
+                // Ignored by penrose.html (unknown fields are silently skipped).
+                robinsonTriangles: triangles.map(triangleToData)
+            };
+
+            requestFilename({
+                title: 'Export to P3',
+                subtitle,
+                defaultName: 'robinson_to_p3',
+                onConfirm: name => { downloadFile(`${name}.json`, JSON.stringify(data, null, 2)); showToast('Tiling saved.'); }
+            });
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────
+
+        function getTriangleBounds(sourceTriangles = triangles) {
+            if (sourceTriangles.length === 0) return null;
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            sourceTriangles.forEach(t => {
+                [t.p1, t.p2, t.p3].forEach(p => {
+                    minX = Math.min(minX, p.x);
+                    maxX = Math.max(maxX, p.x);
+                    minY = Math.min(minY, p.y);
+                    maxY = Math.max(maxY, p.y);
+                });
+            });
+            return { minX, maxX, minY, maxY };
+        }
+
+        function getExportView(targetWidth, targetHeight) {
+            const bounds = getTriangleBounds();
+            if (!bounds) {
+                return { offsetX, offsetY, scale };
+            }
+
+            const pad = 64;
+            const spanX = Math.max(bounds.maxX - bounds.minX, 1);
+            const spanY = Math.max(bounds.maxY - bounds.minY, 1);
+            const exportScale = Math.max(0.05, Math.min((targetWidth - pad * 2) / spanX, (targetHeight - pad * 2) / spanY));
+            const centerX = (bounds.minX + bounds.maxX) / 2;
+            const centerY = (bounds.minY + bounds.maxY) / 2;
+
+            return {
+                scale: exportScale,
+                offsetX: -centerX * exportScale,
+                offsetY: -centerY * exportScale
+            };
+        }
+
+        function fitViewToTriangles(sourceTriangles = triangles) {
+            const bounds = getTriangleBounds(sourceTriangles);
+            if (!bounds || canvas.width === 0 || canvas.height === 0) return;
+
+            const pad = 48;
+            const spanX = Math.max(bounds.maxX - bounds.minX, 1);
+            const spanY = Math.max(bounds.maxY - bounds.minY, 1);
+            scale = Math.max(0.05, Math.min(
+                (canvas.width - pad * 2) / spanX,
+                (canvas.height - pad * 2) / spanY
+            ));
+
+            const centerX = (bounds.minX + bounds.maxX) / 2;
+            const centerY = (bounds.minY + bounds.maxY) / 2;
+            offsetX = -centerX * scale;
+            offsetY = -centerY * scale;
+        }
+
+        function buildTikzContent() {
+            if (triangles.length === 0) return '';
+
+            const bounds = getTriangleBounds();
+            const ox = (bounds.minX + bounds.maxX) / 2;
+            const oy = (bounds.minY + bounds.maxY) / 2;
+            const scaleToTikz = 1 / 200;
+            const pad = 0.2;
+            const fmt = n => {
+                const rounded = Number(n.toFixed(4));
+                return Object.is(rounded, -0) ? '0' : String(rounded);
+            };
+            const tikzX = x => (x - ox) * scaleToTikz;
+            const tikzY = y => -(y - oy) * scaleToTikz;
+            const minX = tikzX(bounds.minX) - pad;
+            const maxX = tikzX(bounds.maxX) + pad;
+            const minY = tikzY(bounds.maxY) - pad;
+            const maxY = tikzY(bounds.minY) + pad;
+            const typeOrder = [TYPE_A1, TYPE_A2, TYPE_B1, TYPE_B2];
+            const tikzStyles = {
+                [TYPE_A1]: { draw: 'robinsonAOneDraw', fill: 'robinsonAOneFill', style: 'robinsonAOne' },
+                [TYPE_A2]: { draw: 'robinsonATwoDraw', fill: 'robinsonATwoFill', style: 'robinsonATwo' },
+                [TYPE_B1]: { draw: 'robinsonBOneDraw', fill: 'robinsonBOneFill', style: 'robinsonBOne' },
+                [TYPE_B2]: { draw: 'robinsonBTwoDraw', fill: 'robinsonBTwoFill', style: 'robinsonBTwo' }
+            };
+            const lines = [];
+
+            lines.push('% Robinson triangle tiling — generated by robinson-triangles');
+            lines.push('% Coordinates are centered on the tiling and scaled so one side length is approximately 1cm.');
+            lines.push('\\begin{tikzpicture}[x=1cm,y=1cm,line join=round,line cap=round]');
+            lines.push('  \\definecolor{robinsonAOneDraw}{RGB}{217,122,74}');
+            lines.push('  \\definecolor{robinsonAOneFill}{RGB}{248,225,210}');
+            lines.push('  \\definecolor{robinsonATwoDraw}{RGB}{208,108,82}');
+            lines.push('  \\definecolor{robinsonATwoFill}{RGB}{246,221,212}');
+            lines.push('  \\definecolor{robinsonBOneDraw}{RGB}{74,144,217}');
+            lines.push('  \\definecolor{robinsonBOneFill}{RGB}{214,232,248}');
+            lines.push('  \\definecolor{robinsonBTwoDraw}{RGB}{82,135,215}');
+            lines.push('  \\definecolor{robinsonBTwoFill}{RGB}{216,229,248}');
+            lines.push('  \\tikzset{');
+            lines.push('    robinsonAOne/.style={draw=robinsonAOneDraw, fill=robinsonAOneFill, line width=0.2pt},');
+            lines.push('    robinsonATwo/.style={draw=robinsonATwoDraw, fill=robinsonATwoFill, line width=0.2pt},');
+            lines.push('    robinsonBOne/.style={draw=robinsonBOneDraw, fill=robinsonBOneFill, line width=0.2pt},');
+            lines.push('    robinsonBTwo/.style={draw=robinsonBTwoDraw, fill=robinsonBTwoFill, line width=0.2pt}');
+            lines.push('  }');
+            lines.push(`  \\path[use as bounding box] (${fmt(minX)},${fmt(minY)}) rectangle (${fmt(maxX)},${fmt(maxY)});`);
+            lines.push('');
+
+            typeOrder.forEach(type => {
+                const group = triangles.filter(triangle => triangle.type === type);
+                if (group.length === 0) return;
+                lines.push(`  % ${type} triangles`);
+                group.forEach(triangle => {
+                    const verts = [triangle.p1, triangle.p2, triangle.p3];
+                    const pts = verts.map(v => `(${fmt(tikzX(v.x))},${fmt(tikzY(v.y))})`).join(' -- ');
+                    lines.push(`  \\path[${tikzStyles[type].style}] ${pts} -- cycle;`);
+                });
+                lines.push('');
+            });
+
+            lines.push('\\end{tikzpicture}');
+            return lines.join('\n');
+        }
+
+        function exportTikzWithName(baseName) {
+            const tikzContent = buildTikzContent();
+            downloadFile(`${baseName}.tikz`, tikzContent);
+            showToast('TikZ file saved.');
+        }
+
+        // ── SVG export ────────────────────────────────────────────────────────────
+
+        function buildSvgContent() {
+            if (triangles.length === 0) return '';
+
+            const bounds = getTriangleBounds();
+            const pad = 20;
+            const svgW = 800;
+            const spanX = bounds.maxX - bounds.minX;
+            const spanY = bounds.maxY - bounds.minY;
+            const sc = Math.min((svgW - pad * 2) / Math.max(spanX, 1), (svgW - pad * 2) / Math.max(spanY, 1));
+            const svgH = Math.round(spanY * sc + pad * 2);
+            const ox = bounds.minX;
+            const oy = bounds.minY;
+
+            const svgColors = {
+                [TYPE_A1]: { fill: '#f8e1d2', stroke: '#d97a4a' },
+                [TYPE_A2]: { fill: '#f6ddd4', stroke: '#c35c5c' },
+                [TYPE_B1]: { fill: '#d6e8f8', stroke: '#4a90d9' },
+                [TYPE_B2]: { fill: '#d8e5f8', stroke: '#5a75d6' },
+            };
+
+            const fmt = n => Number(n.toFixed(3));
+            const tx = x => fmt((x - ox) * sc + pad);
+            const ty = y => fmt((y - oy) * sc + pad);
+
+            const typeOrder = [TYPE_A1, TYPE_A2, TYPE_B1, TYPE_B2];
+            const lines = [];
+            lines.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}">`);
+            lines.push('  <!-- Robinson triangle tiling — generated by robinson-triangles -->');
+
+            typeOrder.forEach(type => {
+                const group = triangles.filter(t => t.type === type);
+                if (group.length === 0) return;
+                const { fill, stroke } = svgColors[type];
+                lines.push(`  <g fill="${fill}" stroke="${stroke}" stroke-width="0.5" stroke-linejoin="round">`);
+                group.forEach(t => {
+                    lines.push(`    <polygon points="${tx(t.p1.x)},${ty(t.p1.y)} ${tx(t.p2.x)},${ty(t.p2.y)} ${tx(t.p3.x)},${ty(t.p3.y)}"/>`);
+                });
+                lines.push('  </g>');
+            });
+
+            lines.push('</svg>');
+            return lines.join('\n');
+        }
+
+        function exportSvgWithName(baseName) {
+            const svgContent = buildSvgContent();
+            downloadFile(`${baseName}.svg`, svgContent, 'image/svg+xml');
+            showToast('SVG file saved.');
+        }
+
+        function exportSvg() {
+            if (triangles.length === 0) { alert('No triangles to export.'); return; }
+            lastFilenameTrigger = document.getElementById('exportSvgBtn');
+            requestFilename({
+                title: 'Export SVG',
+                subtitle: 'Choose a name for the SVG export.',
+                defaultName: 'robinson_triangles',
+                onConfirm: exportSvgWithName
+            });
+        }
+
+        // ── End SVG export ────────────────────────────────────────────────────────
+
+        function exportTikz() {
+            console.log('[robinson] exportTikz called', { triangleCount: triangles.length });
+            if (triangles.length === 0) {
+                console.log('[robinson] exportTikz aborted: no triangles');
+                alert('No triangles to export.');
+                return;
+            }
+
+            lastFilenameTrigger = document.getElementById('exportTikzBtn');
+            requestFilename({
+                title: 'Export TikZ',
+                subtitle: 'Choose a name for the TikZ export.',
+                defaultName: 'robinson_triangles',
+                onConfirm: exportTikzWithName
+            });
+        }
+
+        function buildPdfFromJpegData(jpegBinary, imageWidth, imageHeight) {
+            const pageWidth = +(imageWidth * 0.5).toFixed(2);
+            const pageHeight = +(imageHeight * 0.5).toFixed(2);
+            const stream = `q\n${pageWidth} 0 0 ${pageHeight} 0 0 cm\n/Im0 Do\nQ`;
+            const objects = [
+                '1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n',
+                '2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n',
+                `3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>\nendobj\n`,
+                `4 0 obj\n<< /Type /XObject /Subtype /Image /Width ${imageWidth} /Height ${imageHeight} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpegBinary.length} >>\nstream\n${jpegBinary}\nendstream\nendobj\n`,
+                `5 0 obj\n<< /Length ${stream.length} >>\nstream\n${stream}\nendstream\nendobj\n`,
+            ];
+
+            let pdf = '%PDF-1.3\n%\xFF\xFF\xFF\xFF\n';
+            const offsets = [0];
+            objects.forEach(obj => {
+                offsets.push(pdf.length);
+                pdf += obj;
+            });
+
+            const xrefOffset = pdf.length;
+            pdf += `xref\n0 ${objects.length + 1}\n`;
+            pdf += '0000000000 65535 f \n';
+            for (let i = 1; i <= objects.length; i++) {
+                pdf += `${String(offsets[i]).padStart(10, '0')} 00000 n \n`;
+            }
+            pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+            return Uint8Array.from(pdf, ch => ch.charCodeAt(0) & 0xFF);
+        }
+
+        function exportPdfWithName(baseName) {
+            const exportCanvas = document.createElement('canvas');
+            exportCanvas.width = 1600;
+            exportCanvas.height = 1200;
+
+            const prevCanvas = canvas;
+            const prevCtx = ctx;
+            const prevOffsetX = offsetX;
+            const prevOffsetY = offsetY;
+            const prevScale = scale;
+
+            canvas = exportCanvas;
+            ctx = exportCanvas.getContext('2d');
+            ({ offsetX, offsetY, scale } = getExportView(exportCanvas.width, exportCanvas.height));
+
+            draw({ backgroundColor: '#ffffff' });
+
+            const jpegDataUrl = exportCanvas.toDataURL('image/jpeg', 0.95);
+            const jpegBinary = atob(jpegDataUrl.split(',')[1]);
+            const pdfContent = buildPdfFromJpegData(jpegBinary, exportCanvas.width, exportCanvas.height);
+            downloadFile(`${baseName}.pdf`, pdfContent, 'application/pdf');
+            showToast('PDF saved.');
+
+            canvas = prevCanvas;
+            ctx = prevCtx;
+            offsetX = prevOffsetX;
+            offsetY = prevOffsetY;
+            scale = prevScale;
+            draw();
+        }
+
+        function exportPdf() {
+            console.log('[robinson] exportPdf called', { triangleCount: triangles.length });
+            if (triangles.length === 0) {
+                console.log('[robinson] exportPdf aborted: no triangles');
+                alert('No triangles to export.');
+                return;
+            }
+
+            lastFilenameTrigger = document.getElementById('exportPdfBtn');
+            requestFilename({
+                title: 'Export PDF',
+                subtitle: 'Choose a name for the PDF export.',
+                defaultName: 'robinson_triangles',
+                onConfirm: exportPdfWithName
+            });
+        }
+
+        window.openExportModal = openExportModal;
+        window.closeExportModal = closeExportModal;
+        window.closeFilenameModal = closeFilenameModal;
+        window.exportTikz = exportTikz;
+        window.exportPdf = exportPdf;
+        window.exportSvg = exportSvg;
+
+
+        // ── Tiling logic ─────────────────────────────────────────
+
+        function buildSeedTriangles(seedKey) {
+            switch (seedKey) {
+                case 'singleA1':
+                    return [createTriangleFromApex({ x: 0, y: 0 }, Math.PI / 2, DEFAULT_SIZE, TYPE_A1)];
+                case 'singleA2':
+                    return [createTriangleFromApex({ x: 0, y: 0 }, Math.PI / 2, DEFAULT_SIZE, TYPE_A2)];
+                case 'singleB1':
+                    return [createTriangleFromApex({ x: 0, y: 0 }, Math.PI / 2, DEFAULT_SIZE, TYPE_B1)];
+                case 'singleB2':
+                    return [createTriangleFromApex({ x: 0, y: 0 }, Math.PI / 2, DEFAULT_SIZE, TYPE_B2)];
+                case 'sun10':
+                    return makeSunSeed(10, DEFAULT_SIZE);
+                case 'rhombThin':
+                    return makeRhombSeed('A');
+                case 'rhombThick':
+                    return makeRhombSeed('B');
+                case 'batman':
+                    // Batman is P2-specific, so we fall back or remove.
+                    return makeSunSeed(10, DEFAULT_SIZE);
+                case 'fractal':
+                    return fractalTriangles.length ? fractalTriangles.map(cloneTriangle) : makeRhombSeed('B');
+                case 'uniform':
+                    return uniformTriangles.length ? uniformTriangles.map(cloneTriangle) : makeRhombSeed('B');
+                case 'custom':
+                    return customTriangles.map(cloneTriangle);
+                default:
+                    return makeRhombSeed('B');
+            }
+        }
+
+        function subdivide(iterations) {
+            triangles = buildSeedTriangles(document.getElementById('seedPreset').value);
+            for (let i = 0; i < iterations; i++) {
+                const next = [];
+                for (const t of triangles) next.push(...t.subdivide());
+                triangles = next;
+            }
+        }
+
+        // ── Rendering ────────────────────────────────────────────
+
+        function draw(options = {}) {
+            const { backgroundColor = null } = options;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (backgroundColor) {
+                ctx.fillStyle = backgroundColor;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+            ctx.lineWidth = Math.min(1, 0.6 / scale * (canvas.width / 800));
+            for (const t of triangles) t.draw();
+        }
+
+        function updateCounts() {
+            let a = 0, b = 0;
+            for (const t of triangles) {
+                if (t.type === TYPE_A1 || t.type === TYPE_A2) a++;
+                else b++;
+            }
+            document.getElementById('countA').textContent = a.toLocaleString();
+            document.getElementById('countB').textContent = b.toLocaleString();
+            document.getElementById('countRatio').textContent = a > 0 ? (b / a).toFixed(4) : '∞';
+        }
+
+        function regenerate() {
+            const iters = parseInt(document.getElementById('iterations').value);
+            subdivide(iters);
+            draw();
+            updateCounts();
+            updateSeedDescription();
+        }
+
+        // ── Canvas sizing ─────────────────────────────────────────
+
+        function resizeCanvas() {
+            canvas.width = wrapper.clientWidth;
+            canvas.height = wrapper.clientHeight;
+            draw();
+        }
+
+        // ── View controls ─────────────────────────────────────────
+
+        function resetView() {
+            if (lastLoadedSeed.type === 'preset') {
+                document.getElementById('seedPreset').value = lastLoadedSeed.value;
+            } else if (lastLoadedSeed.type === 'custom') {
+                customTriangles = lastLoadedSeed.triangles.map(cloneTriangle);
+                document.getElementById('seedPreset').value = 'custom';
+            }
+
+            document.getElementById('iterations').value = 0;
+            document.getElementById('iterValue').textContent = '0';
+            regenerate();
+            fitViewToTriangles();
+            draw();
+        }
+
+        function screenToWorld(clientX, clientY) {
+            const rect = canvas.getBoundingClientRect();
+            const x = (clientX - rect.left - canvas.width / 2 - offsetX) / scale;
+            const y = (clientY - rect.top - canvas.height / 2 - offsetY) / scale;
+            return { x, y };
+        }
+
+        function updateSeedDescription() {
+            const seed = document.getElementById('seedPreset').value;
+            document.getElementById('seedDescription').textContent = seedDescriptions[seed];
+        }
+
+        // ── Event listeners ───────────────────────────────────────
+
+        document.getElementById('iterations').addEventListener('mousedown', () => {
+            pushUndo();
+        });
+
+        document.getElementById('iterations').addEventListener('input', (e) => {
+            document.getElementById('iterValue').textContent = e.target.value;
+            regenerate();
+        });
+
+        document.getElementById('dblClickSteps').addEventListener('input', (e) => {
+            document.getElementById('dblClickStepsValue').textContent = e.target.value;
+        });
+
+        document.getElementById('seedPreset').addEventListener('change', (e) => {
+            pushUndo();
+            if (e.target.value !== 'custom') {
+                lastLoadedSeed = { type: 'preset', value: e.target.value };
+            }
+            regenerate();
+            fitViewToTriangles();
+            draw();
+        });
+
+        openHelpBtn.addEventListener('click', openHelpModal);
+        closeHelpBtn.addEventListener('click', closeHelpModal);
+        helpModal.addEventListener('click', (e) => {
+            if (e.target === helpModal) closeHelpModal();
+        });
+        exportModal.addEventListener('click', (e) => {
+            if (e.target === exportModal) closeExportModal();
+        });
+        filenameModal.addEventListener('click', (e) => {
+            if (e.target === filenameModal) closeFilenameModal();
+        });
+        filenameForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const baseName = filenameInput.value.trim();
+            console.log('[robinson] filename modal submit', { baseName, hasAction: !!pendingFileAction });
+            if (!baseName || !pendingFileAction) return;
+            const action = pendingFileAction;
+            filenameModal.hidden = true;
+            pendingFileAction = null;
+            action(baseName);
+        });
+
+        // Scroll to zoom (zoom towards cursor)
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+            const newScale = Math.max(0.05, Math.min(1e9, scale * factor));
+            const rect = canvas.getBoundingClientRect();
+            const mx = e.clientX - rect.left;
+            const my = e.clientY - rect.top;
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            const ratio = newScale / scale;
+            offsetX = mx - cx - (mx - cx - offsetX) * ratio;
+            offsetY = my - cy - (my - cy - offsetY) * ratio;
+            scale = newScale;
+            draw();
+        }, { passive: false });
+
+        // Drag to pan
+        canvas.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            dragStartX = e.clientX - offsetX;
+            dragStartY = e.clientY - offsetY;
+            pointerDragged = false;
+            canvas.classList.add('dragging');
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            offsetX = e.clientX - dragStartX;
+            offsetY = e.clientY - dragStartY;
+            pointerDragged = true;
+            draw();
+        });
+
+        canvas.addEventListener('mouseup', () => { isDragging = false; canvas.classList.remove('dragging'); });
+        canvas.addEventListener('mouseleave', () => {
+            isDragging = false;
+            canvas.classList.remove('dragging');
+        });
+
+        canvas.addEventListener('dblclick', (e) => {
+            const worldPos = screenToWorld(e.clientX, e.clientY);
+            let targetIdx = -1;
+            for (let i = triangles.length - 1; i >= 0; i--) {
+                if (triangles[i].contains(worldPos)) {
+                    targetIdx = i;
+                    break;
+                }
+            }
+
+            if (targetIdx !== -1) {
+                pushUndo();
+                const target = triangles[targetIdx];
+                const steps = parseInt(document.getElementById('dblClickSteps').value) || 1;
+                
+                let currentGen = [target];
+                for (let s = 0; s < steps; s++) {
+                    const nextGen = [];
+                    for (const t of currentGen) {
+                        nextGen.push(...t.subdivide());
+                    }
+                    currentGen = nextGen;
+                }
+                
+                triangles.splice(targetIdx, 1, ...currentGen);
+
+                // Preserve manual subdivisions as the new custom seed base
+                customTriangles = triangles.map(cloneTriangle);
+                document.getElementById('seedPreset').value = 'custom';
+                document.getElementById('iterations').value = 0;
+                document.getElementById('iterValue').textContent = '0';
+
+                draw();
+                updateCounts();
+                updateSeedDescription();
+            }
+        });
+
+        // Touch support
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const t = e.touches[0];
+            isDragging = true;
+            dragStartX = t.clientX - offsetX;
+            dragStartY = t.clientY - offsetY;
+            pointerDragged = false;
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (!isDragging) return;
+            const t = e.touches[0];
+            offsetX = t.clientX - dragStartX;
+            offsetY = t.clientY - dragStartY;
+            pointerDragged = true;
+            draw();
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', () => {
+            isDragging = false;
+        });
+
+        window.addEventListener('resize', resizeCanvas);
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !filenameModal.hidden) {
+                e.preventDefault();
+                closeFilenameModal();
+                return;
+            }
+            if (e.key === 'Escape' && !helpModal.hidden) {
+                e.preventDefault();
+                closeHelpModal();
+                return;
+            }
+            if (e.key === 'Escape' && !exportModal.hidden) {
+                e.preventDefault();
+                closeExportModal();
+                return;
+            }
+            // Block all shortcuts while any modal is open (e.g. typing a filename).
+            if (!filenameModal.hidden || !helpModal.hidden || !exportModal.hidden) return;
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                e.preventDefault();
+                undo();
+                return;
+            }
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && (e.key === 'Z' || e.key === 'z')))) {
+                e.preventDefault();
+                redo();
+                return;
+            }
+            if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) { e.preventDefault(); exportToP3(); return; }
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'l' || e.key === 'L')) { e.preventDefault(); document.getElementById('p3ImportInput').click(); return; }
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'e' || e.key === 'E')) { e.preventDefault(); openExportModal(); return; }
+        });
+
+
+        // ── Init ───────────────────────────────────────────────────
+
+        async function loadBundledTiling(path) {
+            try {
+                const res = await fetch(path);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                if (data.robinsonTriangles && data.robinsonTriangles.length > 0) {
+                    return data.robinsonTriangles.map(d => new Triangle(d.p1, d.p2, d.p3, d.type));
+                }
+            } catch (err) {
+                console.warn(`Could not load bundled tiling ${path}:`, err);
+            }
+            return [];
+        }
+
+        async function init() {
+            resizeCanvas();
+            resetView();
+            [fractalTriangles, uniformTriangles] = await Promise.all([
+                loadBundledTiling('tilings/fractal.json'),
+                loadBundledTiling('tilings/uniform.json'),
+            ]);
+            // If the user has already selected one of these presets, reload now that data is available.
+            const sel = document.getElementById('seedPreset').value;
+            if (sel === 'fractal' || sel === 'uniform') { regenerate(); fitViewToTriangles(); draw(); }
+        }
+
+        init();
+
+        // ── Toast notifications ───────────────────────────────────────────────
+        let _toastTimer = null;
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            clearTimeout(_toastTimer);
+            _toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+        }
+
+        window.showToast = showToast;
+    </script>
+<div id="toast" role="status" aria-live="polite"></div>
+</body>
+
+</html>

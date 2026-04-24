@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "tiles": [
+    {
+      "type": "thick",
+      "wx": -74.54251547519868,
+      "wy": 462.29469536715874,
+      "rotation": 8,
+      "reflection": 1,
+      "color": "#4a90d9",
+      "groupId": null
+    },
+    {
+      "type": "thick",
+      "wx": -73.9244814864488,
+      "wy": 462.29469536715874,
+      "rotation": 9,
+      "reflection": 1,
+      "color": "#4a90d9",
+      "groupId": null
+    },
+    {
+      "type": "thick",
+      "wx": -72.30644749769891,
+      "wy": 462.29469536715874,
+      "rotation": 8,
+      "reflection": 1,
+      "color": "#4a90d9",
+      "groupId": null
+    },
+    {
+      "type": "thick",
+      "wx": -71.68841350894903,
+      "wy": 462.29469536715874,
+      "rotation": 9,
+      "reflection": 1,
+      "color": "#4a90d9",
+      "groupId": null
+    },
+    {
+      "type": "thick",
+      "wx": -70.07037952019914,
+      "wy": 462.2946953671587,
+      "rotation": 8,
+      "reflection": 1,
+      "color": "#4a90d9",
+      "groupId": null
+    },
+    {
+      "type": "thick",
+      "wx": -76.16054946394857,
+      "wy": 462.29469536715874,
+      "rotation": 9,
+      "reflection": 1,
+      "color": "#4a90d9",
+      "groupId": null
+    }
+  ],
+  "supertileDefs": [],
+  "nextGroupId": 1
+}
