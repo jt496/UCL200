@@ -37,10 +37,12 @@ jobs:
 
       - name: Prepare site structure
         run: |
+          mkdir -p site
+          cp index.html site/
+          mkdir -p site/penrose
+          cp -r penrose/* site/penrose/
           mkdir -p site/doughnut
           cp -r doughnut/dist/* site/doughnut/
-          # Add a simple redirect at the root
-          echo '<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0; url=doughnut/"></head><body>Redirecting to <a href="doughnut/">doughnut/</a></body></html>' > site/index.html
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
