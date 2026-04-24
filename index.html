@@ -174,12 +174,22 @@
 
     <main class="container">
         <div class="card">
-            <div class="icon">🔲</div>
+            <div class="icon">
+                <svg width="48" height="48" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M50 5 L90 50 L50 95 L10 50 Z" stroke="url(#penrose-grad)" stroke-width="6" fill="url(#penrose-grad)" fill-opacity="0.2"/>
+                    <defs>
+                        <linearGradient id="penrose-grad" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#6366f1"/>
+                            <stop offset="1" stop-color="#a855f7"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            </div>
             <h2>Penrose Tilings</h2>
             <p>Explore the aperiodicity of Penrose tilings, Robinson tilings and more.</p>
             <div class="btn-group">
-                <a href="penrose/game.html" class="btn">Launch Game</a>
                 <a href="penrose/penrose.html" class="btn secondary">Tiling Explorer</a>
+                <a href="penrose/game.html" class="btn">Game</a>
             </div>
         </div>
 
