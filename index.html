@@ -86,7 +86,6 @@
             background: var(--card-bg);
             border-radius: 24px;
             padding: 2.5rem;
-            text-decoration: none;
             color: inherit;
             transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             border: 1px solid rgba(255, 255, 255, 0.05);
@@ -96,18 +95,8 @@
             overflow: hidden;
         }
 
-        .card::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: var(--grad);
-            opacity: 0;
-            transition: opacity 0.4s;
-            z-index: -1;
-        }
-
         .card:hover {
-            transform: translateY(-10px) scale(1.02);
+            transform: translateY(-8px);
             border-color: var(--accent);
             box-shadow: 0 20px 40px rgba(0,0,0,0.4), 0 0 20px var(--accent-glow);
         }
@@ -125,18 +114,41 @@
             flex-grow: 1;
         }
 
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
         .btn {
             display: inline-block;
             background: rgba(255, 255, 255, 0.05);
             padding: 0.8rem 1.5rem;
             border-radius: 12px;
             font-weight: 600;
-            transition: background 0.3s;
+            transition: all 0.3s;
             text-align: center;
+            text-decoration: none;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .card:hover .btn {
+        .btn:hover {
             background: var(--grad);
+            border-color: transparent;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px var(--accent-glow);
+        }
+
+        .btn.secondary {
+            background: transparent;
+            border: 1px solid var(--accent);
+            color: var(--accent);
+        }
+
+        .btn.secondary:hover {
+            background: var(--accent);
+            color: white;
         }
 
         footer {
@@ -161,19 +173,24 @@
     </header>
 
     <main class="container">
-        <a href="penrose/game.html" class="card">
+        <div class="card">
             <div class="icon">🔲</div>
             <h2>Penrose Tilings</h2>
             <p>Explore the aperiodicity of Penrose tilings, Robinson tilings and more.</p>
-            <div class="btn">Launch Game</div>
-        </a>
+            <div class="btn-group">
+                <a href="penrose/game.html" class="btn">Launch Game</a>
+                <a href="penrose/penrose.html" class="btn secondary">Tiling Explorer</a>
+            </div>
+        </div>
 
-        <a href="doughnut/" class="card">
+        <div class="card">
             <div class="icon">🍩</div>
             <h2>Torus Embeddings</h2>
             <p>Interactive 3D visualization of graph embeddings on a torus.</p>
-            <div class="btn">Open Explorer</div>
-        </a>
+            <div class="btn-group">
+                <a href="doughnut/" class="btn">Open Explorer</a>
+            </div>
+        </div>
     </main>
 
     <footer>
