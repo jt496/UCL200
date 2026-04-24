@@ -1,6 +1,6 @@
 # UCL 200 - Mathematical Visualisations
 
-This repository contains interactive mathematical visualisations developed for the UCL 200 celebrations.
+This repository contains interactive mathematical visualisations developed for the UCL 200 Quiz celebrations.
 
 ## 📐 Project Sections
 
