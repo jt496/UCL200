@@ -2,13 +2,12 @@
 
 This repository contains interactive mathematical visualisations developed for the UCL 200 Quiz celebrations.
 
-## 📐 Project Sections
+## Project Sections
 
-### 1. [Penrose Tile Drop](./penrose/)
-A Tetris-style falling-tile game built on Penrose P3 tilings.
-- **Game**: [Play the game live](https://jt496.github.io/UCL200/penrose/game.html)
-- **Explorer**: [Tiling explorer and level builder](https://jt496.github.io/UCL200/penrose/penrose.html)
+### 1. [Penrose Tilings] (./penrose/)
+- **Explorer**: [Tiling explorer](https://jt496.github.io/UCL200/penrose/penrose.html)
 - **Inflation**: [Robinson triangle inflation explorer](https://jt496.github.io/UCL200/penrose/robinson.html)
+- **Game**: [Play the game live](https://jt496.github.io/UCL200/penrose/game.html)
 
 ### 2. [Torus Graph Embeddings](./doughnut/)
 An interactive explorer for graph embeddings on a torus (the "doughnut").
@@ -37,3 +36,5 @@ npm run dev
 
 ## 📜 License
 MIT
+
+Built with lots of help from Claude Code and Gemini
