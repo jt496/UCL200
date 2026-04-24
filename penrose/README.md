@@ -6,10 +6,9 @@ A Tetris-style falling-tile game built on Penrose P3 tilings. Tiles fall into a 
 
 | File | Purpose |
 | --- | --- |
-| `game.html` | The game |
 | `penrose.html` | Penrose P3 tiling explorer and level builder |
 | `robinson.html` | Robinson triangle / inflation explorer |
-| `ground4.json` | Ground tile data for level 9 (supertile mix) |
+| `game.html` | The game |
 | `tilings/*.json` | Saved tiling configurations for the explorer |
 
 ---
