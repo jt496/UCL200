@@ -1,6 +1,6 @@
-# Penrose Tile Drop
+# Penrose Tilings
 
-A Tetris-style falling-tile game built on Penrose P3 tilings. Tiles fall into a well and must be placed to complete vertices according to the matching rules of the current level. Also includes a tiling explorer and a level builder.
+A Penrose tiling explorer and game.
 
 ## Files
 
